@@ -4,7 +4,7 @@ use serde::de::{Deserialize, Error, Visitor};
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ApiResult {
     OK,
-    ERROR,
+    Error,
 }
 
 impl<'de> Deserialize<'de> for ApiResult {
@@ -27,7 +27,7 @@ impl<'de> Deserialize<'de> for ApiResult {
             {
                 match v {
                     "ok" => Ok(ApiResult::OK),
-                    "error" => Ok(ApiResult::ERROR),
+                    "error" => Ok(ApiResult::Error),
                     v => Err(serde::de::Error::unknown_variant(v, &["ok", "error"])),
                 }
             }
@@ -72,7 +72,7 @@ mod tests {
             "result": "error"
         });
         let data: MyData = serde_json::from_value(data).unwrap();
-        assert_eq!(ApiResult::ERROR, data.result);
+        assert_eq!(ApiResult::Error, data.result);
     }
 
     #[test]
@@ -95,7 +95,7 @@ mod tests {
     fn deserializes_from_error() {
         let data = serde_json::json!("error");
         assert_eq!(
-            ApiResult::ERROR,
+            ApiResult::Error,
             serde_json::from_value::<ApiResult>(data).unwrap()
         );
     }
