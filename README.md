@@ -1,7 +1,7 @@
 # mangadex-rs
 [![Rust](https://github.com/edg-l/mangadex-rs/actions/workflows/rust.yml/badge.svg)](https://github.com/edg-l/mangadex-rs/actions/workflows/rust.yml)
 [![crates.io](http://meritbadge.herokuapp.com/mangadex)](https://crates.io/crates/mangadex)
-[![License](https://img.shields.io/github/license/edg-l/mangadex)](https://github.com/edg-l/mangadex/blob/master/LICENSE)
+[![License](https://img.shields.io/github/license/edg-l/mangadex-rs)](https://github.com/edg-l/mangadex-rs/blob/master/LICENSE)
 
 > Early work in progress.
 
