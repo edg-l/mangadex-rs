@@ -1,7 +1,7 @@
 # mangadex-rs
-Early work in progress.
+> Early work in progress.
 
-An unofficial asynchronous mangadex API wrapper for rust
+Unofficial asynchronous mangadex API wrapper for rust
 
 https://rust-lang.github.io/api-guidelines/checklist.html
 

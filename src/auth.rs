@@ -1,13 +1,13 @@
 use super::Client;
-use crate::errors::*;
 use crate::common::*;
+use crate::errors::*;
 use serde::{Deserialize, Serialize};
 
 // Tokens returned on login.
 #[derive(Debug, Deserialize, Clone)]
 pub struct AuthTokens {
     pub session: String,
-    pub refresh: String
+    pub refresh: String,
 }
 
 /// The response returned on [Client::login].
@@ -33,7 +33,6 @@ pub struct CheckTokenResponse {
 }
 
 impl Client {
-
     /// Login endpoint
     ///
     /// * `username` - Should be between [1, 64] characters.
@@ -41,10 +40,7 @@ impl Client {
     pub async fn login(&mut self, username: &str, password: &str) -> Result<LoginResponse> {
         let endpoint = self.base_url.join("/auth/login")?;
 
-        let request = LoginRequest {
-            username,
-            password
-        };
+        let request = LoginRequest { username, password };
 
         let res = self.http.post(endpoint).json(&request).send().await?;
 
@@ -73,7 +69,12 @@ impl Client {
 
         let endpoint = self.base_url.join("/auth/check")?;
 
-        let res = self.http.get(endpoint).bearer_auth(&tokens.session).send().await?;
+        let res = self
+            .http
+            .get(endpoint)
+            .bearer_auth(&tokens.session)
+            .send()
+            .await?;
 
         Ok(res.json::<CheckTokenResponse>().await?)
     }
@@ -95,7 +96,10 @@ mod tests {
         let auth_details = get_auth_details();
 
         let mut client = Client::new().unwrap();
-        let res = client.login(&auth_details.0, &auth_details.1).await.unwrap();
+        let res = client
+            .login(&auth_details.0, &auth_details.1)
+            .await
+            .unwrap();
 
         assert!(!res.token.refresh.is_empty());
         assert!(!res.token.session.is_empty());

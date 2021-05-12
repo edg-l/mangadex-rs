@@ -25,7 +25,6 @@ static APP_USER_AGENT: &str = concat!(
     env!("CARGO_PKG_VERSION"),
 );
 
-
 /// The client used to talk to the api.
 pub struct Client {
     http: reqwest::Client,
