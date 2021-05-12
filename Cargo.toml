@@ -1,0 +1,26 @@
+[package]
+name = "mangadex"
+version = "0.1.0"
+authors = ["Edgar <git@edgarluque.com>"]
+edition = "2018"
+license = "MIT"
+documentation = "https://docs.rs/mangadex"
+readme = "README.md"
+repository = "https://github.com/edg-l/mangadex/"
+keywords = ["api", "mangadex", "wrapper", "async", "manga"]
+categories = ["api-bindings", "web-programming"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+reqwest = { version = "0.11", features = ["json"] }
+serde = { version = "1.0.125", features = ["derive"] }
+thiserror = "1.0.24"
+tokio = { version = "1", features = ["full"] }
+url = "2.2.2"
+
+[dev-dependencies]
+ctor = "0.1.20"
+dotenv = "0.15.0"
+pretty_assertions = "0.7.2"
+serde_json = "1.0.64"
