@@ -1,9 +1,13 @@
 use serde::de::{Deserialize, Error, Visitor};
 
+
+
 /// Common values returned in the "result" field from most responses.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ApiResult {
-    OK,
+    /// There was no error.
+    Ok,
+    /// There was an error.
     Error,
 }
 
@@ -26,7 +30,7 @@ impl<'de> Deserialize<'de> for ApiResult {
                 E: Error,
             {
                 match v {
-                    "ok" => Ok(ApiResult::OK),
+                    "ok" => Ok(ApiResult::Ok),
                     "error" => Ok(ApiResult::Error),
                     v => Err(serde::de::Error::unknown_variant(v, &["ok", "error"])),
                 }
@@ -63,7 +67,7 @@ mod tests {
             "result": "ok"
         });
         let data: MyData = serde_json::from_value(data).unwrap();
-        assert_eq!(ApiResult::OK, data.result);
+        assert_eq!(ApiResult::Ok, data.result);
     }
 
     #[test]
@@ -86,7 +90,7 @@ mod tests {
     fn deserializes_from_ok() {
         let data = serde_json::json!("ok");
         assert_eq!(
-            ApiResult::OK,
+            ApiResult::Ok,
             serde_json::from_value::<ApiResult>(data).unwrap()
         );
     }

@@ -1,6 +1,7 @@
 use super::Client;
 use crate::common::*;
 use crate::errors::*;
+use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 
 // Tokens returned on login.
@@ -43,12 +44,11 @@ impl Client {
         let request = LoginRequest { username, password };
 
         let res = self.http.post(endpoint).json(&request).send().await?;
+        let login = Self::deserialize_response::<LoginResponse, ApiErrors>(res).await?;
 
-        let res = res.json::<LoginResponse>().await?;
+        self.set_tokens(&login.token);
 
-        self.set_tokens(&res.token);
-
-        Ok(res)
+        Ok(login)
     }
 
     // Set the tokens used for authentication.
@@ -119,7 +119,7 @@ mod tests {
         client.set_tokens(&tokens);
         let res = client.check_token().await.unwrap();
 
-        assert_eq!(ApiResult::OK, res.result);
+        assert_eq!(ApiResult::Ok, res.result);
 
         println!("{:#?}", res);
     }

@@ -16,7 +16,11 @@ pub mod user;
 
 pub use reqwest;
 
-use reqwest::Url;
+use errors::Result;
+use reqwest::{Response, StatusCode, Url};
+use serde::de::DeserializeOwned;
+
+use crate::errors::ApiErrors;
 
 static APP_USER_AGENT: &str = concat!(
     env!("CARGO_PKG_NAME"),
@@ -46,6 +50,26 @@ impl Client {
             base_url,
             tokens: None,
         })
+    }
+
+    async fn deserialize_response<T, E>(res: Response) -> Result<T>
+    where
+        T: DeserializeOwned,
+        E: DeserializeOwned + Into<errors::Errors>,
+    {
+        let status = res.status();
+
+        if !status.is_success() {
+            match res.error_for_status_ref() {
+                Err(_) => match res.json::<E>().await {
+                    Ok(value) => Err(value.into()),
+                    Err(err) => Err(err.into()),
+                },
+                _ => unreachable!("this shouldn't be reachable."),
+            }
+        } else {
+            Ok(res.json::<T>().await?)
+        }
     }
 }
 
