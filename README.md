@@ -9,7 +9,24 @@ Unofficial asynchronous mangadex API wrapper for rust
 
 https://rust-lang.github.io/api-guidelines/checklist.html
 
-https://api.mangadex.org/docs.html
+Api reference: https://api.mangadex.org/docs.html
+
+## TODO
+- Auth ✅
+- Rate limits ❌
+- Manga ❌
+- Author ❌
+- Search ❌
+- Scanlationgroup ❌
+- Feed ❌
+- CustomList ❌
+- Captcha ❌
+- AtHome ❌
+- Legacy ❌
+- Infrastructure ❌
+- Account ❌
+- User ❌
+- Chapter ❌
 
 ## Tests
 Tests that require making calls to the api are ignored by default, to run them you need to setup a .env file likes this:

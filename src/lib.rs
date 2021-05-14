@@ -9,6 +9,7 @@ pub mod errors;
 pub mod feed;
 pub mod group;
 pub mod infrastructure;
+pub mod jwt;
 pub mod legacy;
 pub mod list;
 pub mod manga;
@@ -17,10 +18,8 @@ pub mod user;
 pub use reqwest;
 
 use errors::Result;
-use reqwest::{Response, StatusCode, Url};
+use reqwest::{Response, Url};
 use serde::de::DeserializeOwned;
-
-use crate::errors::ApiErrors;
 
 static APP_USER_AGENT: &str = concat!(
     env!("CARGO_PKG_NAME"),
@@ -61,9 +60,9 @@ impl Client {
 
         if !status.is_success() {
             match res.error_for_status_ref() {
-                Err(_) => match res.json::<E>().await {
+                Err(err) => match res.json::<E>().await {
                     Ok(value) => Err(value.into()),
-                    Err(err) => Err(err.into()),
+                    Err(_decode_err) => Err(err.into()),
                 },
                 _ => unreachable!("this shouldn't be reachable."),
             }

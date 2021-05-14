@@ -1,6 +1,5 @@
 use serde::de::{Deserialize, Error, Visitor};
-
-
+use uuid::Uuid;
 
 /// Common values returned in the "result" field from most responses.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -39,6 +38,18 @@ impl<'de> Deserialize<'de> for ApiResult {
 
         deserializer.deserialize_str(ResultVisitor)
     }
+}
+
+/// A response for endpoints which only give a simple result.
+#[derive(Debug, serde::Deserialize)]
+pub struct SimpleApiResponse {
+    result: ApiResult,
+}
+
+#[derive(Debug, serde::Serialize)]
+pub struct ListRequest {
+    pub limit: i32,
+    pub offset: i32,
 }
 
 #[cfg(test)]
@@ -103,4 +114,10 @@ mod tests {
             serde_json::from_value::<ApiResult>(data).unwrap()
         );
     }
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct Relationship {
+    pub id: Uuid,
+    pub r#type: String,
 }

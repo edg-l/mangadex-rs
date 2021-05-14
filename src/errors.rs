@@ -24,7 +24,7 @@ pub enum Errors {
 pub struct ApiErrors {
     pub result: ApiResult,
     /// A list of errors.
-    pub errors: Vec<ApiError>,
+    pub errors: Option<Vec<ApiError>>,
 }
 
 #[derive(Debug, Error, PartialEq, Eq, serde::Deserialize)]
