@@ -34,7 +34,7 @@ pub struct ScanlationGroupResponse {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct GroupListResponse {
+pub struct GroupResults {
     pub results: Vec<ScanlationGroupResponse>,
     pub limit: i32,
     pub offset: i32,
@@ -82,11 +82,11 @@ impl<'a> CreateGroupRequest<'a> {
 
 impl Client {
     /// Search for scanlation groups.
-    pub async fn list_group(&self, request: &GroupListRequest<'_>) -> Result<GroupListResponse> {
+    pub async fn list_group(&self, request: &GroupListRequest<'_>) -> Result<GroupResults> {
         let endpoint = self.base_url.join("/group")?;
 
-        let res = self.http.get(endpoint).query(&request).send().await?;
-        let res = Self::deserialize_response::<GroupListResponse, ApiErrors>(res).await?;
+        let res = self.http.get(endpoint).query(request).send().await?;
+        let res = Self::deserialize_response::<GroupResults, ApiErrors>(res).await?;
 
         Ok(res)
     }
@@ -213,7 +213,7 @@ impl Client {
     }
 
     /// List the followed groups by the logged user.
-    pub async fn followed_groups(&self, request: &ListRequest) -> Result<GroupListResponse> {
+    pub async fn followed_groups(&self, request: &ListRequest) -> Result<GroupResults> {
         let tokens = self.require_tokens()?;
 
         let endpoint = self.base_url.join("/user/follows/group")?;
@@ -225,7 +225,7 @@ impl Client {
             .bearer_auth(&tokens.session)
             .send()
             .await?;
-        let res = Self::deserialize_response::<GroupListResponse, ApiErrors>(res).await?;
+        let res = Self::deserialize_response::<GroupResults, ApiErrors>(res).await?;
 
         Ok(res)
     }

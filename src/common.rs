@@ -1,43 +1,22 @@
-use serde::de::{Deserialize, Error, Visitor};
 use uuid::Uuid;
+use serde::Deserialize;
+
+pub type LocalizedString = std::collections::HashMap<String, String>;
+
+#[derive(Debug, serde::Deserialize)]
+pub struct Relationship {
+    pub id: Uuid,
+    pub r#type: String,
+}
 
 /// Common values returned in the "result" field from most responses.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum ApiResult {
     /// There was no error.
     Ok,
     /// There was an error.
     Error,
-}
-
-impl<'de> Deserialize<'de> for ApiResult {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        struct ResultVisitor;
-
-        impl<'de> Visitor<'de> for ResultVisitor {
-            type Value = ApiResult;
-
-            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-                formatter.write_str("`ok` or `error`")
-            }
-
-            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-            where
-                E: Error,
-            {
-                match v {
-                    "ok" => Ok(ApiResult::Ok),
-                    "error" => Ok(ApiResult::Error),
-                    v => Err(serde::de::Error::unknown_variant(v, &["ok", "error"])),
-                }
-            }
-        }
-
-        deserializer.deserialize_str(ResultVisitor)
-    }
 }
 
 /// A response for endpoints which only give a simple result.
@@ -114,10 +93,4 @@ mod tests {
             serde_json::from_value::<ApiResult>(data).unwrap()
         );
     }
-}
-
-#[derive(Debug, serde::Deserialize)]
-pub struct Relationship {
-    pub id: Uuid,
-    pub r#type: String,
 }
