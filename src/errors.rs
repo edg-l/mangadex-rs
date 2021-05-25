@@ -17,6 +17,9 @@ pub enum Errors {
     MissingTokens,
     #[error("http error with body")]
     HttpWithBody(#[from] ApiErrors),
+    /// Received an unexpected response from /ping.
+    #[error("invalid ping response")]
+    PingError,
 }
 
 #[derive(Debug, Error, PartialEq, Eq, serde::Deserialize)]
