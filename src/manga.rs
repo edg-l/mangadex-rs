@@ -1,15 +1,14 @@
 use std::collections::HashMap;
 
 use crate::{
-    common::{ApiResult, ListRequest, Relationship, SimpleApiResponse, LocalizedString},
+    common::{ApiObject, ApiObjectResult, LocalizedString, Results},
     errors::{ApiErrors, Result},
-    user::User,
     Client,
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 use serde_with::skip_serializing_none;
+use uuid::Uuid;
 
 /// The tag mode.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -129,10 +128,10 @@ pub struct Links {
 #[serde(rename_all = "camelCase")]
 pub struct MangaAttributes {
     pub title: LocalizedString,
-    pub alt_titles: Vec<LocalizedString>, 
+    pub alt_titles: Vec<LocalizedString>,
     // Known issue: empty descriptions return [] instead of {}
     #[serde(skip)]
-    pub description: LocalizedString, 
+    pub description: LocalizedString,
     pub is_locked: bool,
     pub links: Links,
     pub original_language: String,
@@ -149,30 +148,9 @@ pub struct MangaAttributes {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Manga {
-    pub id: Uuid,
-    pub r#type: String,
-    pub attributes: MangaAttributes,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct MangaResponse {
-    pub result: ApiResult,
-    pub data: Manga,
-    pub relationships: Vec<Relationship>,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct MangaResults {
-    pub results: Vec<MangaResponse>,
-    pub limit: i32,
-    pub offset: i32,
-    pub total: i32,
-}
+pub type Manga = ApiObject<MangaAttributes>;
+pub type MangaResult = ApiObjectResult<Manga>;
+pub type MangaResults = Results<MangaResult>;
 
 impl Client {
     pub async fn list_manga(&self, query: &MangaQuery<'_>) -> Result<MangaResults> {
@@ -196,5 +174,4 @@ mod tests {
         let mangas = client.list_manga(&query).await.unwrap();
         println!("{:#?}", mangas);
     }
-
 }

@@ -1,5 +1,5 @@
-use uuid::Uuid;
 use serde::Deserialize;
+use uuid::Uuid;
 
 pub type LocalizedString = std::collections::HashMap<String, String>;
 
@@ -17,6 +17,30 @@ pub enum ApiResult {
     Ok,
     /// There was an error.
     Error,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ApiObject<T> {
+    pub id: Uuid,
+    pub r#type: String,
+    pub attributes: T,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ApiObjectResult<T> {
+    pub result: ApiResult,
+    pub data: T,
+    pub relationships: Vec<Relationship>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Results<T> {
+    pub results: Vec<T>,
+    pub limit: i32,
+    pub offset: i32,
+    pub total: i32,
 }
 
 /// A response for endpoints which only give a simple result.

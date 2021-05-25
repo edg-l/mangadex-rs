@@ -1,5 +1,5 @@
 use crate::{
-    common::{ApiResult, ListRequest, Relationship, SimpleApiResponse},
+    common::{ApiObject, ApiObjectResult, ListRequest, Results, SimpleApiResponse},
     errors::{ApiErrors, Result},
     user::User,
     Client,
@@ -19,27 +19,9 @@ pub struct ScanlationGroupAttributes {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Deserialize)]
-pub struct ScanlationGroup {
-    pub id: Uuid,
-    pub r#type: String,
-    pub attributes: ScanlationGroupAttributes,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct ScanlationGroupResponse {
-    pub result: ApiResult,
-    pub data: ScanlationGroup,
-    pub relationships: Vec<Relationship>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct GroupResults {
-    pub results: Vec<ScanlationGroupResponse>,
-    pub limit: i32,
-    pub offset: i32,
-    pub total: i32,
-}
+pub type ScanlationGroup = ApiObject<ScanlationGroupAttributes>;
+pub type ScanlationGroupResult = ApiObjectResult<ScanlationGroup>;
+pub type GroupResults = Results<ScanlationGroupResult>;
 
 #[derive(Debug, Serialize)]
 pub struct GroupListRequest<'a> {
@@ -95,7 +77,7 @@ impl Client {
     pub async fn create_group(
         &self,
         request: &CreateGroupRequest<'_>,
-    ) -> Result<ScanlationGroupResponse> {
+    ) -> Result<ScanlationGroupResult> {
         let tokens = self.require_tokens()?;
 
         let endpoint = self.base_url.join("/group")?;
@@ -107,19 +89,19 @@ impl Client {
             .json(&request)
             .send()
             .await?;
-        let res = Self::deserialize_response::<ScanlationGroupResponse, ApiErrors>(res).await?;
+        let res = Self::deserialize_response::<ScanlationGroupResult, ApiErrors>(res).await?;
 
         Ok(res)
     }
 
     /// View a group.
-    pub async fn view_group(&self, id: &Uuid) -> Result<ScanlationGroupResponse> {
+    pub async fn view_group(&self, id: &Uuid) -> Result<ScanlationGroupResult> {
         let mut buffer = Uuid::encode_buffer();
         let id_str = id.to_hyphenated_ref().encode_lower(&mut buffer);
         let endpoint = self.base_url.join("/group/")?.join(id_str)?;
 
         let res = self.http.get(endpoint).send().await?;
-        let res = Self::deserialize_response::<ScanlationGroupResponse, ApiErrors>(res).await?;
+        let res = Self::deserialize_response::<ScanlationGroupResult, ApiErrors>(res).await?;
 
         Ok(res)
     }
@@ -128,7 +110,7 @@ impl Client {
     pub async fn update_group(
         &self,
         request: &CreateGroupRequest<'_>,
-    ) -> Result<ScanlationGroupResponse> {
+    ) -> Result<ScanlationGroupResult> {
         let tokens = self.require_tokens()?;
 
         let endpoint = self.base_url.join("/group")?;
@@ -140,7 +122,7 @@ impl Client {
             .json(&request)
             .send()
             .await?;
-        let res = Self::deserialize_response::<ScanlationGroupResponse, ApiErrors>(res).await?;
+        let res = Self::deserialize_response::<ScanlationGroupResult, ApiErrors>(res).await?;
 
         Ok(res)
     }
