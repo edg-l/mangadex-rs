@@ -7,6 +7,7 @@ use crate::{
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use serde_with::skip_serializing_none;
 
 #[derive(Debug, Deserialize)]
 pub struct ScanlationGroupAttributes {
@@ -43,6 +44,7 @@ impl<'a> GroupListRequest<'a> {
     }
 }
 
+#[skip_serializing_none]
 #[derive(Debug, Serialize)]
 pub struct CreateGroupRequest<'a> {
     pub name: &'a str,
@@ -74,6 +76,8 @@ impl Client {
     }
 
     /// Create a group.
+    ///
+    /// Requires auth.
     pub async fn create_group(
         &self,
         request: &CreateGroupRequest<'_>,
@@ -107,6 +111,8 @@ impl Client {
     }
 
     /// Update a group.
+    ///
+    /// Requires auth.
     pub async fn update_group(
         &self,
         request: &CreateGroupRequest<'_>,
@@ -128,6 +134,8 @@ impl Client {
     }
 
     /// Delete a group.
+    ///
+    /// Requires auth.
     pub async fn delete_group(&self, id: &Uuid) -> Result<SimpleApiResponse> {
         let tokens = self.require_tokens()?;
 
@@ -147,6 +155,8 @@ impl Client {
     }
 
     /// Follow a group.
+    ///
+    /// Requires auth.
     pub async fn follow_group(&self, id: &Uuid) -> Result<SimpleApiResponse> {
         let tokens = self.require_tokens()?;
 
@@ -171,6 +181,8 @@ impl Client {
     }
 
     /// Unfollow a group.
+    ///
+    /// Requires auth.
     pub async fn unfollow_group(&self, id: &Uuid) -> Result<SimpleApiResponse> {
         let tokens = self.require_tokens()?;
 
@@ -195,6 +207,8 @@ impl Client {
     }
 
     /// List the followed groups by the logged user.
+    ///
+    /// Requires auth.
     pub async fn followed_groups(&self, request: &ListRequest) -> Result<GroupResults> {
         let tokens = self.require_tokens()?;
 
@@ -216,6 +230,7 @@ impl Client {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use pretty_assertions::assert_eq;
 
     #[tokio::test]
     async fn list_group() {

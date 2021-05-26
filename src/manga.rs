@@ -107,7 +107,8 @@ pub struct Tag {
     pub attributes: TagAttributes,
 }
 
-#[derive(Debug, Deserialize)]
+#[skip_serializing_none]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Links {
     pub al: Option<String>,
     pub ap: Option<String>,
@@ -148,11 +149,34 @@ pub struct MangaAttributes {
     pub updated_at: DateTime<Utc>,
 }
 
+#[skip_serializing_none]
+#[derive(Debug, Serialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct MangaPayload {
+    pub title: LocalizedString,
+    pub alt_titles: Option<Vec<LocalizedString>>,
+    pub description: Option<LocalizedString>,
+    pub authors: Option<Vec<Uuid>>,
+    pub artists: Option<Vec<Uuid>>,
+    pub links: Option<Links>,
+    pub original_language: Option<String>,
+    pub last_volume: Option<String>,
+    pub last_chapter: Option<String>,
+    pub publication_demographic: Option<Demographic>,
+    pub status: Option<MangaStatus>,
+    /// Year of release
+    pub year: Option<i32>,
+    pub content_rating: Option<ContentRating>,
+    pub mod_notes: Option<String>,
+    pub version: i32,
+}
+
 pub type Manga = ApiObject<MangaAttributes>;
 pub type MangaResult = ApiObjectResult<Manga>;
 pub type MangaResults = Results<MangaResult>;
 
 impl Client {
+    /// List mangas.
     pub async fn list_manga(&self, query: &MangaQuery<'_>) -> Result<MangaResults> {
         let endpoint = self.base_url.join("/manga")?;
 
@@ -161,11 +185,44 @@ impl Client {
 
         Ok(res)
     }
+
+    /// Create a manga.
+    ///
+    /// Requires auth.
+    pub async fn create_manga(&self, request: &MangaPayload) -> Result<MangaResult> {
+        let tokens = self.require_tokens()?;
+
+        let endpoint = self.base_url.join("/manga")?;
+
+        let res = self
+            .http
+            .post(endpoint)
+            .bearer_auth(&tokens.session)
+            .json(request)
+            .send()
+            .await?;
+        let res = Self::deserialize_response::<MangaResult, ApiErrors>(res).await?;
+
+        Ok(res)
+    }
+
+    /// View a single manga.
+    pub async fn view_manga(&self, id: &Uuid) -> Result<MangaResult> {
+        let endpoint = self.base_url.join("/manga/")?.join(&format!("{}", id))?;
+
+        let res = self.http.get(endpoint).send().await?;
+        let res = Self::deserialize_response::<MangaResult, ApiErrors>(res).await?;
+
+        Ok(res)
+    }
+
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use pretty_assertions::assert_eq;
+    use chrono::prelude::*;
 
     #[tokio::test]
     async fn list_manga() {
@@ -174,5 +231,22 @@ mod tests {
         let manga = client.list_manga(&query).await.unwrap();
         assert_eq!(manga.offset, 0);
         assert_eq!(manga.limit, 10);
+    }
+
+    #[tokio::test]
+    async fn view_manga() {
+        let id = Uuid::parse_str("32d76d19-8a05-4db0-9fc2-e0b0648fe9d0").unwrap();
+        let client = Client::new().unwrap();
+        let manga_result = client.view_manga(&id).await.unwrap();
+
+        let manga = manga_result.data;
+        assert_eq!(manga.id, id);
+        assert_eq!(
+            manga.attributes.title.get("en").map(String::as_str),
+            Some("Solo Leveling")
+        );
+        assert_eq!(manga.attributes.original_language.as_str(), "ko");
+        // 2019-08-25T10:51:55+00:00
+        assert_eq!(manga.attributes.created_at, Utc.ymd(2019, 8, 25).and_hms(10, 51, 55));
     }
 }
