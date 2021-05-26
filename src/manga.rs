@@ -471,7 +471,6 @@ impl Client {
         Ok(res)
     }
 
-    /// Get a random Manga
     pub async fn tag_list(&self) -> Result<Vec<TagResult>> {
         let endpoint = self.base_url.join("/manga/tag")?;
 
