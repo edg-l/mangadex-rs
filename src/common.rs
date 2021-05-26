@@ -22,10 +22,10 @@ pub enum ApiResult {
 
 #[derive(Debug, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-pub struct ApiObject<T> {
+pub struct ApiObject<A, T = ResourceType> {
     pub id: Uuid,
-    pub r#type: ResourceType,
-    pub attributes: T,
+    pub r#type: T,
+    pub attributes: A,
 }
 
 #[derive(Debug, Deserialize, PartialEq, Eq)]
@@ -59,16 +59,15 @@ pub struct PaginationQuery {
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum ResourceType {
-    #[serde(alias = "scanlation_group")]
-    Group,
     Manga,
     Chapter,
-    Tag,
-    MappingId,
+    CoverArt,
     Author,
     Artist,
+    ScanlationGroup,
+    Tag,
     User,
-    CoverArt,
+    CustomList,
 }
 
 #[cfg(test)]

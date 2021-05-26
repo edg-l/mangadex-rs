@@ -1,22 +1,37 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{errors::ApiErrors, ApiObject, ApiObjectResult, Client, ResourceType, Result};
+use crate::{errors::ApiErrors, ApiObject, ApiObjectResult, Client, Result};
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum MappingType {
+    Group,
+    Manga,
+    Chapter,
+    Tag,
+}
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MappingQuery {
-    pub r#type: ResourceType,
+    pub r#type: MappingType,
     pub ids: Vec<u32>,
 }
 
-type MappingId = ApiObject<MappingIdAttributes>;
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum MappingIdType {
+    MappingId,
+}
+
+type MappingId = ApiObject<MappingIdAttributes, MappingIdType>;
 pub type MappingResponse = Vec<ApiObjectResult<MappingId>>;
 
 #[derive(Debug, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct MappingIdAttributes {
-    pub r#type: ResourceType,
+    pub r#type: MappingType,
     pub legacy_id: u32,
     pub new_id: Uuid,
 }
@@ -41,7 +56,7 @@ mod tests {
         let client = Client::new().unwrap();
         let mapping = client
             .legacy_mapping(&MappingQuery {
-                r#type: ResourceType::Manga,
+                r#type: MappingType::Manga,
                 ids: vec![1],
             })
             .await
@@ -50,9 +65,9 @@ mod tests {
             mapping[0].data,
             MappingId {
                 id: Uuid::parse_str("24b6d026-a7cb-498e-8717-26b2831cf318").unwrap(),
-                r#type: ResourceType::MappingId,
+                r#type: MappingIdType::MappingId,
                 attributes: MappingIdAttributes {
-                    r#type: ResourceType::Manga,
+                    r#type: MappingType::Manga,
                     legacy_id: 1,
                     new_id: Uuid::parse_str("c0ee660b-f9f2-45c3-8068-5123ff53f84a").unwrap()
                 }
