@@ -1,4 +1,5 @@
 # mangadex-rs
+
 [![Rust](https://github.com/edg-l/mangadex-rs/actions/workflows/rust.yml/badge.svg)](https://github.com/edg-l/mangadex-rs/actions/workflows/rust.yml)
 [![crates.io](http://meritbadge.herokuapp.com/mangadex)](https://crates.io/crates/mangadex)
 [![License](https://img.shields.io/github/license/edg-l/mangadex-rs)](https://github.com/edg-l/mangadex-rs/blob/master/LICENSE)
@@ -12,6 +13,7 @@ https://rust-lang.github.io/api-guidelines/checklist.html
 Api reference: https://api.mangadex.org/docs.html
 
 ## TODO
+
 - Auth ✅
 - Rate limits ❌
 - Manga ❌
@@ -21,14 +23,15 @@ Api reference: https://api.mangadex.org/docs.html
 - Feed ❌
 - CustomList ❌
 - Captcha ❌
-- AtHome ❌
+- AtHome ✅
 - Legacy ❌
-- Infrastructure ❌
+- Infrastructure ✅
 - Account ❌
 - User ❌
 - Chapter ❌
 
 ## Tests
+
 Tests that require making calls to the api are ignored by default, to run them you need to setup a .env file likes this:
 
 ```bash
