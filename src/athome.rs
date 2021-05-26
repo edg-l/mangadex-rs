@@ -10,11 +10,11 @@ struct AtHomeServer {
 }
 
 impl Client {
-    pub async fn at_home(&self, chapter_id: Uuid, force_port443: bool) -> Result<Url> {
+    pub async fn at_home(&self, chapter_id: &Uuid, force_port443: bool) -> Result<Url> {
         let mut endpoint = self
             .base_url
             .join("/at-home/server/")?
-            .join(&format!("{}", chapter_id))?;
+            .join(&format!("{:x}", chapter_id))?;
 
         if force_port443 {
             endpoint
@@ -39,7 +39,7 @@ mod tests {
         let client = Client::new().unwrap();
         let chapter_uuid = uuid::Uuid::parse_str("0e94efb5-6cb5-49fd-b522-51b4460c9821").unwrap();
 
-        client.at_home(chapter_uuid, false).await.unwrap();
+        client.at_home(&chapter_uuid, false).await.unwrap();
     }
 
     #[tokio::test]
@@ -47,7 +47,7 @@ mod tests {
         let client = Client::new().unwrap();
         let chapter_uuid = uuid::Uuid::parse_str("0e94efb5-6cb5-49fd-b522-51b4460c9821").unwrap();
 
-        let url = client.at_home(chapter_uuid, true).await.unwrap();
+        let url = client.at_home(&chapter_uuid, true).await.unwrap();
         assert_eq!(url.port_or_known_default(), Some(443));
     }
 }
