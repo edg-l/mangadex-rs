@@ -1,7 +1,6 @@
+use serde::Deserialize;
 use thiserror::Error;
 use uuid::Uuid;
-
-use crate::common::ApiResult;
 
 /// A enum with all the possible errors.
 #[derive(Debug, Error)]
@@ -22,15 +21,15 @@ pub enum Errors {
     PingError,
 }
 
-#[derive(Debug, Error, PartialEq, Eq, serde::Deserialize)]
+#[derive(Debug, Error, PartialEq, Eq, Deserialize)]
 #[error("bad request")]
 pub struct ApiErrors {
-    pub result: ApiResult,
     /// A list of errors.
-    pub errors: Option<Vec<ApiError>>,
+    #[serde(default)]
+    pub errors: Vec<ApiError>,
 }
 
-#[derive(Debug, Error, PartialEq, Eq, serde::Deserialize)]
+#[derive(Debug, Error, PartialEq, Eq, Deserialize)]
 #[error("api error")]
 pub struct ApiError {
     /// The error id.

@@ -12,15 +12,13 @@ pub struct AuthTokens {
     pub refresh: String,
 }
 
-/// The response returned on [Client::login].
-#[derive(Debug, Deserialize)]
-pub struct LoginResponse {
-    pub result: ApiResult,
+#[derive(Deserialize)]
+struct LoginResponse {
     pub token: AuthTokens,
 }
 
 /// Request payload to login.
-#[derive(Debug, Serialize)]
+#[derive(Serialize)]
 struct LoginRequest<'a> {
     username: &'a str,
     password: &'a str,
@@ -28,9 +26,8 @@ struct LoginRequest<'a> {
 
 /// Response when checking a token.
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CheckTokenResponse {
-    pub result: ApiResult,
-    #[serde(rename(deserialize = "isAuthenticated"))]
     pub is_authenticated: bool,
     pub roles: Vec<String>,
     pub permissions: Vec<String>,
@@ -46,7 +43,6 @@ struct RefreshTokenRequest<'a> {
 /// The response when refreshing the session token.
 #[derive(Debug, Deserialize)]
 pub struct RefreshTokenResponse {
-    pub result: ApiResult,
     pub token: AuthTokens,
     pub message: Option<String>,
 }
@@ -56,41 +52,35 @@ impl Client {
     ///
     /// * `username` - Should be between [1, 64] characters.
     /// * `password` - Should be between [8, 1024] characters.
-    pub async fn login(&mut self, username: &str, password: &str) -> Result<LoginResponse> {
+    pub async fn login(&mut self, username: &str, password: &str) -> Result<AuthTokens> {
         let endpoint = self.base_url.join("/auth/login")?;
-
         let request = LoginRequest { username, password };
 
         let res = self.http.post(endpoint).json(&request).send().await?;
-        let login = Self::deserialize_response::<LoginResponse, ApiErrors>(res).await?;
+        let res = Self::json_api_result::<LoginResponse>(res).await?;
 
-        self.set_tokens(&login.token);
+        self.set_tokens(Some(res.token.clone()));
+        Ok(res.token)
+    }
 
-        Ok(login)
+    /// Get the tokens used for authentication
+    pub fn get_tokens(&self) -> Option<&AuthTokens> {
+        self.tokens.as_ref()
     }
 
     /// Set the tokens used for authentication.
-    pub fn set_tokens(&mut self, tokens: &AuthTokens) {
-        self.tokens = Some(tokens.clone());
-    }
-
-    /// Clears the stored tokens, like a logout.
-    pub fn clear_tokens(&mut self) {
-        self.tokens = None;
+    pub fn set_tokens(&mut self, tokens: Option<AuthTokens>) {
+        self.tokens = tokens;
     }
 
     /// Convenience method to be used with ?.
     pub(crate) fn require_tokens(&self) -> Result<&AuthTokens> {
-        match &self.tokens {
-            Some(tokens) => Ok(tokens),
-            None => Err(Errors::MissingTokens),
-        }
+        self.tokens.as_ref().ok_or(Errors::MissingTokens)
     }
 
     /// Check token endpoint
     pub async fn check_token(&self) -> Result<CheckTokenResponse> {
         let tokens = self.require_tokens()?;
-
         let endpoint = self.base_url.join("/auth/check")?;
 
         let res = self
@@ -100,13 +90,11 @@ impl Client {
             .send()
             .await?;
 
-        let res = Self::deserialize_response::<CheckTokenResponse, ApiErrors>(res).await?;
-
-        Ok(res)
+        Self::json_api_result(res).await
     }
 
     /// Logout endpoint
-    pub async fn logout(&mut self) -> Result<SimpleApiResponse> {
+    pub async fn logout(&mut self) -> Result<()> {
         let tokens = self.require_tokens()?;
         let endpoint = self.base_url.join("/auth/logout")?;
 
@@ -116,10 +104,10 @@ impl Client {
             .bearer_auth(&tokens.session)
             .send()
             .await?;
-        let res = Self::deserialize_response::<SimpleApiResponse, ApiErrors>(res).await?;
-        self.clear_tokens();
 
-        Ok(res)
+        Self::json_api_result::<NoData>(res).await?;
+        self.set_tokens(None);
+        Ok(())
     }
 
     /// Refresh token endpoint
@@ -138,9 +126,9 @@ impl Client {
             .json(&request)
             .send()
             .await?;
-        let res = Self::deserialize_response::<RefreshTokenResponse, ApiErrors>(res).await?;
-        self.set_tokens(&res.token);
 
+        let res = Self::json_api_result::<RefreshTokenResponse>(res).await?;
+        self.set_tokens(Some(res.token.clone()));
         Ok(res)
     }
 }
@@ -149,7 +137,6 @@ impl Client {
 mod tests {
     use super::*;
     use crate::tests::*;
-    use pretty_assertions::assert_eq;
 
     #[tokio::test]
     #[ignore = "require api auth"]
@@ -166,13 +153,10 @@ mod tests {
             .await
             .unwrap();
 
-        assert!(!res.token.refresh.is_empty());
-        assert!(!res.token.session.is_empty());
+        assert!(!res.refresh.is_empty());
+        assert!(!res.session.is_empty());
 
-        println!("{:#?}", res.token);
-
-        let res = client.check_token().await.unwrap();
-        assert_eq!(ApiResult::Ok, res.result);
+        client.check_token().await.unwrap();
     }
 
     #[tokio::test]
@@ -184,12 +168,8 @@ mod tests {
         let tokens = get_tokens();
 
         let mut client = Client::new().unwrap();
-        client.set_tokens(&tokens);
-        let res = client.check_token().await.unwrap();
-
-        assert_eq!(ApiResult::Ok, res.result);
-
-        println!("{:#?}", res);
+        client.set_tokens(Some(tokens));
+        client.check_token().await.unwrap();
     }
 
     #[tokio::test]
@@ -201,11 +181,7 @@ mod tests {
         let tokens = get_tokens();
 
         let mut client = Client::new().unwrap();
-        client.set_tokens(&tokens);
-        let res = client.refresh_token().await.unwrap();
-
-        assert_eq!(ApiResult::Ok, res.result);
-
-        println!("{:#?}", res);
+        client.set_tokens(Some(tokens));
+        client.refresh_token().await.unwrap();
     }
 }

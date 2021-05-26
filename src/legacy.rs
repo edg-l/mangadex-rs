@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{errors::ApiErrors, ApiObject, ApiObjectResult, Client, Result};
+use crate::{ApiData, ApiObject, Client, Result};
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
@@ -26,7 +26,7 @@ pub enum MappingIdType {
 }
 
 type MappingId = ApiObject<MappingIdAttributes, MappingIdType>;
-pub type MappingResponse = Vec<ApiObjectResult<MappingId>>;
+pub type MappingIdResponse = Result<ApiData<MappingId>>;
 
 #[derive(Debug, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -37,12 +37,11 @@ pub struct MappingIdAttributes {
 }
 
 impl Client {
-    pub async fn legacy_mapping(&self, query: &MappingQuery) -> Result<MappingResponse> {
+    pub async fn legacy_mapping(&self, query: &MappingQuery) -> Result<Vec<MappingIdResponse>> {
         let endpoint = self.base_url.join("/legacy/mapping")?;
         let res = self.http.post(endpoint).json(query).send().await?;
-        let res = Self::deserialize_response::<MappingResponse, ApiErrors>(res).await?;
 
-        Ok(res)
+        Self::json_api_result_vec(res).await
     }
 }
 
@@ -62,7 +61,7 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(
-            mapping[0].data,
+            mapping[0].as_ref().unwrap().data,
             MappingId {
                 id: Uuid::parse_str("24b6d026-a7cb-498e-8717-26b2831cf318").unwrap(),
                 r#type: MappingIdType::MappingId,

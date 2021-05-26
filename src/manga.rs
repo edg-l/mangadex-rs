@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
 use crate::{
-    common::{ApiObject, ApiObjectResult, LocalizedString, Results},
-    errors::{ApiErrors, Result},
-    ApiResult, Client, PaginationQuery, SimpleApiResponse,
+    common::{ApiObject, LocalizedString, Results},
+    errors::Result,
+    ApiData, Client, NoData, PaginationQuery,
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -119,7 +119,7 @@ pub struct TagAttributes {
 }
 
 #[skip_serializing_none]
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct Links {
     pub al: Option<String>,
     pub ap: Option<String>,
@@ -145,6 +145,7 @@ pub struct MangaAttributes {
     #[serde(skip)]
     pub description: LocalizedString,
     pub is_locked: bool,
+    #[serde(default)]
     pub links: Links,
     pub original_language: String,
     pub last_volume: Option<String>,
@@ -201,47 +202,41 @@ pub struct ChapterAttributes {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MangaReadingStatuses {
-    pub result: ApiResult,
     pub statuses: HashMap<Uuid, MangaStatus>,
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MangaReadingStatus {
-    pub result: ApiResult,
     pub status: MangaStatus,
 }
 
 pub type Tag = ApiObject<TagAttributes>;
-pub type TagResult = ApiObjectResult<Tag>;
+pub type TagResponse = Result<ApiData<Tag>>;
 
 pub type Manga = ApiObject<MangaAttributes>;
-pub type MangaResult = ApiObjectResult<Manga>;
-pub type MangaResults = Results<MangaResult>;
+pub type MangaResponse = Result<ApiData<Manga>>;
+pub type MangaList = Results<MangaResponse>;
 
 pub type Chapter = ApiObject<ChapterAttributes>;
-pub type ChapterResult = ApiObjectResult<Chapter>;
-pub type ChapterResults = Results<ChapterResult>;
+pub type ChapterResponse = Result<ApiData<Chapter>>;
+pub type ChapterList = Results<ChapterResponse>;
 
 impl Client {
     /// List mangas.
-    pub async fn list_manga(&self, query: &MangaQuery<'_>) -> Result<MangaResults> {
+    pub async fn list_manga(&self, query: &MangaQuery<'_>) -> Result<MangaList> {
         let endpoint = self.base_url.join("/manga")?;
-
         let res = self.http.get(endpoint).query(query).send().await?;
-        let res = Self::deserialize_response::<MangaResults, ApiErrors>(res).await?;
 
-        Ok(res)
+        Self::json_api_results(res).await
     }
 
     /// Create a manga.
     ///
     /// Requires auth.
-    pub async fn create_manga(&self, request: &MangaPayload) -> Result<MangaResult> {
+    pub async fn create_manga(&self, request: &MangaPayload) -> MangaResponse {
         let tokens = self.require_tokens()?;
-
         let endpoint = self.base_url.join("/manga")?;
-
         let res = self
             .http
             .post(endpoint)
@@ -249,19 +244,16 @@ impl Client {
             .json(request)
             .send()
             .await?;
-        let res = Self::deserialize_response::<MangaResult, ApiErrors>(res).await?;
 
-        Ok(res)
+        Self::json_api_result(res).await
     }
 
     /// Update a manga.
     ///
     /// Requires auth.
-    pub async fn update_manga(&self, request: &MangaPayload) -> Result<MangaResult> {
+    pub async fn update_manga(&self, request: &MangaPayload) -> MangaResponse {
         let tokens = self.require_tokens()?;
-
         let endpoint = self.base_url.join("/manga")?;
-
         let res = self
             .http
             .put(endpoint)
@@ -269,25 +261,22 @@ impl Client {
             .json(request)
             .send()
             .await?;
-        let res = Self::deserialize_response::<MangaResult, ApiErrors>(res).await?;
 
-        Ok(res)
+        Self::json_api_result(res).await
     }
 
     /// View a single manga.
-    pub async fn view_manga(&self, id: &Uuid) -> Result<MangaResult> {
+    pub async fn view_manga(&self, id: &Uuid) -> MangaResponse {
         let endpoint = self.base_url.join(&format!("/manga/{:x}", id))?;
-
         let res = self.http.get(endpoint).send().await?;
-        let res = Self::deserialize_response::<MangaResult, ApiErrors>(res).await?;
 
-        Ok(res)
+        Self::json_api_result(res).await
     }
 
     /// Delete a manga.
     ///
     /// Requires auth.
-    pub async fn delete_manga(&self, id: &Uuid) -> Result<SimpleApiResponse> {
+    pub async fn delete_manga(&self, id: &Uuid) -> Result<()> {
         let tokens = self.require_tokens()?;
 
         let endpoint = self.base_url.join(&format!("/manga/{:x}", id))?;
@@ -298,19 +287,15 @@ impl Client {
             .bearer_auth(&tokens.session)
             .send()
             .await?;
-        let res = Self::deserialize_response::<SimpleApiResponse, ApiErrors>(res).await?;
 
-        Ok(res)
+        Self::json_api_result::<NoData>(res).await?;
+        Ok(())
     }
 
     /// Add manga to CustomList
     ///
     /// Requires auth.
-    pub async fn add_manga_to_custom_list(
-        &self,
-        manga_id: &Uuid,
-        list_id: &Uuid,
-    ) -> Result<SimpleApiResponse> {
+    pub async fn add_manga_to_custom_list(&self, manga_id: &Uuid, list_id: &Uuid) -> Result<()> {
         let tokens = self.require_tokens()?;
 
         let endpoint = self
@@ -323,9 +308,9 @@ impl Client {
             .bearer_auth(&tokens.session)
             .send()
             .await?;
-        let res = Self::deserialize_response::<SimpleApiResponse, ApiErrors>(res).await?;
 
-        Ok(res)
+        Self::json_api_result::<NoData>(res).await?;
+        Ok(())
     }
 
     /// Remove manga from CustomList
@@ -335,30 +320,26 @@ impl Client {
         &self,
         manga_id: &Uuid,
         list_id: &Uuid,
-    ) -> Result<SimpleApiResponse> {
+    ) -> Result<()> {
         let tokens = self.require_tokens()?;
-
         let endpoint = self
             .base_url
             .join(&format!("/manga/{:x}/list/{:x}", manga_id, list_id))?;
-
         let res = self
             .http
             .delete(endpoint)
             .bearer_auth(&tokens.session)
             .send()
             .await?;
-        let res = Self::deserialize_response::<SimpleApiResponse, ApiErrors>(res).await?;
 
-        Ok(res)
+        Self::json_api_result::<NoData>(res).await?;
+        Ok(())
     }
 
     /// Get logged User followed Manga feed
-    pub async fn followed_manga_feed(&self, query: &MangaFeedQuery) -> Result<ChapterResults> {
+    pub async fn followed_manga_feed(&self, query: &MangaFeedQuery) -> Result<ChapterList> {
         let tokens = self.require_tokens()?;
-
         let endpoint = self.base_url.join("/user/follows/manga/feed")?;
-
         let res = self
             .http
             .get(endpoint)
@@ -366,12 +347,11 @@ impl Client {
             .json(query)
             .send()
             .await?;
-        let res = Self::deserialize_response::<ChapterResults, ApiErrors>(res).await?;
 
-        Ok(res)
+        Self::json_api_results(res).await
     }
 
-    pub async fn unfollow_manga(&self, manga_id: &Uuid) -> Result<SimpleApiResponse> {
+    pub async fn unfollow_manga(&self, manga_id: &Uuid) -> Result<()> {
         let tokens = self.require_tokens()?;
 
         let endpoint = self
@@ -384,12 +364,12 @@ impl Client {
             .bearer_auth(&tokens.session)
             .send()
             .await?;
-        let res = Self::deserialize_response::<SimpleApiResponse, ApiErrors>(res).await?;
 
-        Ok(res)
+        Self::json_api_result::<NoData>(res).await?;
+        Ok(())
     }
 
-    pub async fn follow_manga(&self, manga_id: &Uuid) -> Result<SimpleApiResponse> {
+    pub async fn follow_manga(&self, manga_id: &Uuid) -> Result<()> {
         let tokens = self.require_tokens()?;
 
         let endpoint = self
@@ -402,26 +382,20 @@ impl Client {
             .bearer_auth(&tokens.session)
             .send()
             .await?;
-        let res = Self::deserialize_response::<SimpleApiResponse, ApiErrors>(res).await?;
 
-        Ok(res)
+        Self::json_api_result::<NoData>(res).await?;
+        Ok(())
     }
 
-    pub async fn manga_feed(
-        &self,
-        manga_id: &Uuid,
-        query: &MangaFeedQuery,
-    ) -> Result<ChapterResults> {
+    pub async fn manga_feed(&self, manga_id: &Uuid, query: &MangaFeedQuery) -> Result<ChapterList> {
         let endpoint = self.base_url.join(&format!("/manga/{:x}/feed", manga_id))?;
-
         let res = self.http.get(endpoint).json(query).send().await?;
-        let res = Self::deserialize_response::<ChapterResults, ApiErrors>(res).await?;
 
-        Ok(res)
+        Self::json_api_results(res).await
     }
 
     /// A list of chapter ids that are marked as read for the specified manga
-    pub async fn manga_read_markers(&self, manga_id: &Uuid) -> Result<ApiObjectResult<Vec<Uuid>>> {
+    pub async fn manga_read_markers(&self, manga_id: &Uuid) -> Result<ApiData<Vec<Uuid>>> {
         let tokens = self.require_tokens()?;
         let endpoint = self.base_url.join(&format!("/manga/{:x}/read", manga_id))?;
 
@@ -431,16 +405,12 @@ impl Client {
             .bearer_auth(&tokens.session)
             .send()
             .await?;
-        let res = Self::deserialize_response::<_, ApiErrors>(res).await?;
 
-        Ok(res)
+        Self::json_api_result(res).await
     }
 
     /// A list of chapter ids that are marked as read for the given manga ids
-    pub async fn manga_read_markers_more(
-        &self,
-        manga_ids: &[Uuid],
-    ) -> Result<ApiObjectResult<Vec<Uuid>>> {
+    pub async fn manga_read_markers_more(&self, manga_ids: &[Uuid]) -> Result<ApiData<Vec<Uuid>>> {
         let tokens = self.require_tokens()?;
         let endpoint = self.base_url.join("/manga/read")?;
 
@@ -456,33 +426,27 @@ impl Client {
             )
             .send()
             .await?;
-        let res = Self::deserialize_response::<_, ApiErrors>(res).await?;
 
-        Ok(res)
+        Self::json_api_result(res).await
     }
 
     /// Get a random Manga
-    pub async fn random_manga(&self) -> Result<MangaResult> {
+    pub async fn random_manga(&self) -> MangaResponse {
         let endpoint = self.base_url.join("/manga/random")?;
-
         let res = self.http.get(endpoint).send().await?;
-        let res = Self::deserialize_response::<MangaResult, ApiErrors>(res).await?;
 
-        Ok(res)
+        Self::json_api_result(res).await
     }
 
-    pub async fn tag_list(&self) -> Result<Vec<TagResult>> {
+    pub async fn tag_list(&self) -> Result<Vec<TagResponse>> {
         let endpoint = self.base_url.join("/manga/tag")?;
-
         let res = self.http.get(endpoint).send().await?;
-        let res = Self::deserialize_response::<_, ApiErrors>(res).await?;
 
-        Ok(res)
+        Self::json_api_result_vec(res).await
     }
 
-    pub async fn followed_manga_list(&self, query: &PaginationQuery) -> Result<MangaResults> {
+    pub async fn followed_manga_list(&self, query: &PaginationQuery) -> Result<MangaList> {
         let tokens = self.require_tokens()?;
-
         let endpoint = self.base_url.join("/user/follows/manga")?;
 
         let res = self
@@ -492,9 +456,8 @@ impl Client {
             .json(query)
             .send()
             .await?;
-        let res = Self::deserialize_response::<_, ApiErrors>(res).await?;
 
-        Ok(res)
+        Self::json_api_results(res).await
     }
 
     /// Get all Manga reading status for logged User
@@ -503,24 +466,20 @@ impl Client {
         status: Option<MangaStatus>,
     ) -> Result<MangaReadingStatuses> {
         let tokens = self.require_tokens()?;
-
         let endpoint = self.base_url.join("/manga/status")?;
 
         let mut req = self.http.get(endpoint).bearer_auth(&tokens.session);
-
         if let Some(status) = status {
             req = req.query(&[("status", status)]);
         }
 
         let res = req.send().await?;
-        let res = Self::deserialize_response::<_, ApiErrors>(res).await?;
 
-        Ok(res)
+        Self::json_api_result(res).await
     }
 
     pub async fn manga_reading_status(&self, manga_id: &Uuid) -> Result<MangaReadingStatus> {
         let tokens = self.require_tokens()?;
-
         let endpoint = self
             .base_url
             .join(&format!("/manga/{:x}/status", manga_id))?;
@@ -531,16 +490,15 @@ impl Client {
             .bearer_auth(&tokens.session)
             .send()
             .await?;
-        let res = Self::deserialize_response::<_, ApiErrors>(res).await?;
 
-        Ok(res)
+        Self::json_api_result(res).await
     }
 
     pub async fn update_manga_reading_status(
         &self,
         manga_id: &Uuid,
         status: MangaStatus,
-    ) -> Result<SimpleApiResponse> {
+    ) -> Result<()> {
         let tokens = self.require_tokens()?;
 
         let endpoint = self
@@ -557,9 +515,9 @@ impl Client {
             .json(&payload)
             .send()
             .await?;
-        let res = Self::deserialize_response::<_, ApiErrors>(res).await?;
 
-        Ok(res)
+        Self::json_api_result::<NoData>(res).await?;
+        Ok(())
     }
 }
 
@@ -619,7 +577,7 @@ mod tests {
         let tag_results = client.tag_list().await.unwrap();
 
         for result in &tag_results {
-            let tag = &result.data;
+            let tag = &result.as_ref().unwrap().data;
             assert_eq!(tag.r#type, ResourceType::Tag);
         }
     }
