@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::{
     common::{ApiObject, ApiObjectResult, LocalizedString, Results},
     errors::{ApiErrors, Result},
-    Client, PaginationQuery, SimpleApiResponse,
+    ApiResult, Client, PaginationQuery, SimpleApiResponse,
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -196,6 +196,20 @@ pub struct ChapterAttributes {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub publish_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MangaReadingStatuses {
+    pub result: ApiResult,
+    pub statuses: HashMap<Uuid, MangaStatus>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MangaReadingStatus {
+    pub result: ApiResult,
+    pub status: MangaStatus,
 }
 
 pub type Tag = ApiObject<TagAttributes>;
@@ -466,6 +480,88 @@ impl Client {
 
         Ok(res)
     }
+
+    pub async fn followed_manga_list(&self, query: &PaginationQuery) -> Result<MangaResults> {
+        let tokens = self.require_tokens()?;
+
+        let endpoint = self.base_url.join("/user/follows/manga")?;
+
+        let res = self
+            .http
+            .get(endpoint)
+            .bearer_auth(&tokens.session)
+            .json(query)
+            .send()
+            .await?;
+        let res = Self::deserialize_response::<_, ApiErrors>(res).await?;
+
+        Ok(res)
+    }
+
+    /// Get all Manga reading status for logged User
+    pub async fn all_manga_reading_status(
+        &self,
+        status: Option<MangaStatus>,
+    ) -> Result<MangaReadingStatuses> {
+        let tokens = self.require_tokens()?;
+
+        let endpoint = self.base_url.join("/manga/status")?;
+
+        let mut req = self.http.get(endpoint).bearer_auth(&tokens.session);
+
+        if let Some(status) = status {
+            req = req.query(&[("status", status)]);
+        }
+
+        let res = req.send().await?;
+        let res = Self::deserialize_response::<_, ApiErrors>(res).await?;
+
+        Ok(res)
+    }
+
+    pub async fn manga_reading_status(&self, manga_id: &Uuid) -> Result<MangaReadingStatus> {
+        let tokens = self.require_tokens()?;
+
+        let endpoint = self
+            .base_url
+            .join(&format!("/manga/{:x}/status", manga_id))?;
+
+        let res = self
+            .http
+            .get(endpoint)
+            .bearer_auth(&tokens.session)
+            .send()
+            .await?;
+        let res = Self::deserialize_response::<_, ApiErrors>(res).await?;
+
+        Ok(res)
+    }
+
+    pub async fn update_manga_reading_status(
+        &self,
+        manga_id: &Uuid,
+        status: MangaStatus,
+    ) -> Result<SimpleApiResponse> {
+        let tokens = self.require_tokens()?;
+
+        let endpoint = self
+            .base_url
+            .join(&format!("/manga/{:x}/status", manga_id))?;
+
+        let mut payload = HashMap::with_capacity(1);
+        payload.insert("status", status);
+
+        let res = self
+            .http
+            .post(endpoint)
+            .bearer_auth(&tokens.session)
+            .json(&payload)
+            .send()
+            .await?;
+        let res = Self::deserialize_response::<_, ApiErrors>(res).await?;
+
+        Ok(res)
+    }
 }
 
 #[cfg(test)]
@@ -516,5 +612,16 @@ mod tests {
         let manga_result = client.random_manga().await.unwrap();
         let manga = manga_result.data;
         assert_eq!(manga.r#type, ResourceType::Manga);
+    }
+
+    #[tokio::test]
+    async fn tag_list() {
+        let client = Client::new().unwrap();
+        let tag_results = client.tag_list().await.unwrap();
+
+        for result in &tag_results {
+            let tag = &result.data;
+            assert_eq!(tag.r#type, ResourceType::Tag);
+        }
     }
 }
