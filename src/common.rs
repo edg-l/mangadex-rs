@@ -51,7 +51,7 @@ pub struct SimpleApiResponse {
 }
 
 #[derive(Debug, Serialize, Default)]
-pub struct ListRequest {
+pub struct PaginationQuery {
     pub limit: Option<i32>,
     pub offset: Option<i32>,
 }

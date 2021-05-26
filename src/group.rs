@@ -1,5 +1,5 @@
 use crate::{
-    common::{ApiObject, ApiObjectResult, ListRequest, Results, SimpleApiResponse},
+    common::{ApiObject, ApiObjectResult, PaginationQuery, Results, SimpleApiResponse},
     errors::{ApiErrors, Result},
     user::User,
     Client,
@@ -100,9 +100,7 @@ impl Client {
 
     /// View a group.
     pub async fn view_group(&self, id: &Uuid) -> Result<ScanlationGroupResult> {
-        let mut buffer = Uuid::encode_buffer();
-        let id_str = id.to_hyphenated_ref().encode_lower(&mut buffer);
-        let endpoint = self.base_url.join("/group/")?.join(id_str)?;
+        let endpoint = self.base_url.join(&format!("/group/{:x}", id))?;
 
         let res = self.http.get(endpoint).send().await?;
         let res = Self::deserialize_response::<ScanlationGroupResult, ApiErrors>(res).await?;
@@ -160,14 +158,7 @@ impl Client {
     pub async fn follow_group(&self, id: &Uuid) -> Result<SimpleApiResponse> {
         let tokens = self.require_tokens()?;
 
-        let mut buffer = Uuid::encode_buffer();
-        let id_str = id.to_hyphenated_ref().encode_lower(&mut buffer);
-
-        let endpoint = self
-            .base_url
-            .join("/group/")?
-            .join(&format!("{}/", id_str))?
-            .join("follow")?;
+        let endpoint = self.base_url.join(&format!("/group/{:x}/follow", id))?;
 
         let res = self
             .http
@@ -186,14 +177,7 @@ impl Client {
     pub async fn unfollow_group(&self, id: &Uuid) -> Result<SimpleApiResponse> {
         let tokens = self.require_tokens()?;
 
-        let mut buffer = Uuid::encode_buffer();
-        let id_str = id.to_hyphenated_ref().encode_lower(&mut buffer);
-
-        let endpoint = self
-            .base_url
-            .join("/group/")?
-            .join(&format!("{}/", id_str))?
-            .join("follow")?;
+        let endpoint = self.base_url.join(&format!("/group/{:x}/follow", id))?;
 
         let res = self
             .http
@@ -209,15 +193,15 @@ impl Client {
     /// List the followed groups by the logged user.
     ///
     /// Requires auth.
-    pub async fn followed_groups(&self, request: &ListRequest) -> Result<GroupResults> {
+    pub async fn followed_groups(&self, query: &PaginationQuery) -> Result<GroupResults> {
         let tokens = self.require_tokens()?;
 
         let endpoint = self.base_url.join("/user/follows/group")?;
 
         let res = self
             .http
-            .delete(endpoint)
-            .query(&request)
+            .get(endpoint)
+            .query(&query)
             .bearer_auth(&tokens.session)
             .send()
             .await?;

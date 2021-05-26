@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::{
     common::{ApiObject, ApiObjectResult, LocalizedString, Results},
     errors::{ApiErrors, Result},
-    Client, SimpleApiResponse,
+    Client, PaginationQuery, SimpleApiResponse,
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -59,11 +59,17 @@ pub enum OrderType {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Order {
-    #[serde(rename = "createdAt")]
     pub created_at: OrderType,
-    #[serde(rename = "updatedAt")]
     pub updated_at: OrderType,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FeedOrder {
+    pub volume: OrderType,
+    pub chapter: OrderType,
 }
 
 #[skip_serializing_none]
@@ -88,6 +94,19 @@ pub struct MangaQuery<'a> {
     pub order: Option<Order>,
 }
 
+#[skip_serializing_none]
+#[derive(Debug, Serialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct MangaFeedQuery {
+    #[serde(flatten)]
+    pub pagination: PaginationQuery,
+    pub translated_language: Option<Vec<String>>,
+    pub created_at_since: Option<DateTime<Utc>>,
+    pub updated_at_since: Option<DateTime<Utc>>,
+    pub publish_at_since: Option<DateTime<Utc>>,
+    pub order: Option<FeedOrder>,
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TagAttributes {
@@ -97,14 +116,6 @@ pub struct TagAttributes {
     pub description: LocalizedString,
     pub group: String,
     pub version: i32,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Tag {
-    pub id: Uuid,
-    pub r#type: String,
-    pub attributes: TagAttributes,
 }
 
 #[skip_serializing_none]
@@ -171,9 +182,32 @@ pub struct MangaPayload {
     pub version: i32,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ChapterAttributes {
+    pub title: String,
+    pub volume: Option<String>,
+    pub translated_language: String,
+    pub hash: String,
+    pub data: Vec<String>,
+    pub data_saver: Vec<String>,
+    pub uploader: Uuid,
+    pub version: i32,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub publish_at: DateTime<Utc>,
+}
+
+pub type Tag = ApiObject<TagAttributes>;
+pub type TagResult = ApiObjectResult<Tag>;
+
 pub type Manga = ApiObject<MangaAttributes>;
 pub type MangaResult = ApiObjectResult<Manga>;
 pub type MangaResults = Results<MangaResult>;
+
+pub type Chapter = ApiObject<ChapterAttributes>;
+pub type ChapterResult = ApiObjectResult<Chapter>;
+pub type ChapterResults = Results<ChapterResult>;
 
 impl Client {
     /// List mangas.
@@ -228,7 +262,7 @@ impl Client {
 
     /// View a single manga.
     pub async fn view_manga(&self, id: &Uuid) -> Result<MangaResult> {
-        let endpoint = self.base_url.join("/manga/")?.join(&format!("{}", id))?;
+        let endpoint = self.base_url.join(&format!("/manga/{:x}", id))?;
 
         let res = self.http.get(endpoint).send().await?;
         let res = Self::deserialize_response::<MangaResult, ApiErrors>(res).await?;
@@ -242,7 +276,7 @@ impl Client {
     pub async fn delete_manga(&self, id: &Uuid) -> Result<SimpleApiResponse> {
         let tokens = self.require_tokens()?;
 
-        let endpoint = self.base_url.join("/manga/")?.join(&format!("{}", id))?;
+        let endpoint = self.base_url.join(&format!("/manga/{:x}", id))?;
 
         let res = self
             .http
@@ -267,10 +301,7 @@ impl Client {
 
         let endpoint = self
             .base_url
-            .join("/manga/")?
-            .join(&format!("{}/", manga_id))?
-            .join("list/")?
-            .join(&format!("{}", list_id))?;
+            .join(&format!("/manga/{:x}/list/{:x}", manga_id, list_id))?;
 
         let res = self
             .http
@@ -295,10 +326,7 @@ impl Client {
 
         let endpoint = self
             .base_url
-            .join("/manga/")?
-            .join(&format!("{}/", manga_id))?
-            .join("list/")?
-            .join(&format!("{}", list_id))?;
+            .join(&format!("/manga/{:x}/list/{:x}", manga_id, list_id))?;
 
         let res = self
             .http
@@ -310,10 +338,140 @@ impl Client {
 
         Ok(res)
     }
+
+    /// Get logged User followed Manga feed
+    pub async fn followed_manga_feed(&self, query: &MangaFeedQuery) -> Result<ChapterResults> {
+        let tokens = self.require_tokens()?;
+
+        let endpoint = self.base_url.join("/user/follows/manga/feed")?;
+
+        let res = self
+            .http
+            .get(endpoint)
+            .bearer_auth(&tokens.session)
+            .json(query)
+            .send()
+            .await?;
+        let res = Self::deserialize_response::<ChapterResults, ApiErrors>(res).await?;
+
+        Ok(res)
+    }
+
+    pub async fn unfollow_manga(&self, manga_id: &Uuid) -> Result<SimpleApiResponse> {
+        let tokens = self.require_tokens()?;
+
+        let endpoint = self
+            .base_url
+            .join(&format!("/manga/{:x}/follow", manga_id))?;
+
+        let res = self
+            .http
+            .delete(endpoint)
+            .bearer_auth(&tokens.session)
+            .send()
+            .await?;
+        let res = Self::deserialize_response::<SimpleApiResponse, ApiErrors>(res).await?;
+
+        Ok(res)
+    }
+
+    pub async fn follow_manga(&self, manga_id: &Uuid) -> Result<SimpleApiResponse> {
+        let tokens = self.require_tokens()?;
+
+        let endpoint = self
+            .base_url
+            .join(&format!("/manga/{:x}/follow", manga_id))?;
+
+        let res = self
+            .http
+            .post(endpoint)
+            .bearer_auth(&tokens.session)
+            .send()
+            .await?;
+        let res = Self::deserialize_response::<SimpleApiResponse, ApiErrors>(res).await?;
+
+        Ok(res)
+    }
+
+    pub async fn manga_feed(
+        &self,
+        manga_id: &Uuid,
+        query: &MangaFeedQuery,
+    ) -> Result<ChapterResults> {
+        let endpoint = self.base_url.join(&format!("/manga/{:x}/feed", manga_id))?;
+
+        let res = self.http.get(endpoint).json(query).send().await?;
+        let res = Self::deserialize_response::<ChapterResults, ApiErrors>(res).await?;
+
+        Ok(res)
+    }
+
+    /// A list of chapter ids that are marked as read for the specified manga
+    pub async fn manga_read_markers(&self, manga_id: &Uuid) -> Result<ApiObjectResult<Vec<Uuid>>> {
+        let tokens = self.require_tokens()?;
+        let endpoint = self.base_url.join(&format!("/manga/{:x}/read", manga_id))?;
+
+        let res = self
+            .http
+            .get(endpoint)
+            .bearer_auth(&tokens.session)
+            .send()
+            .await?;
+        let res = Self::deserialize_response::<_, ApiErrors>(res).await?;
+
+        Ok(res)
+    }
+
+    /// A list of chapter ids that are marked as read for the given manga ids
+    pub async fn manga_read_markers_more(
+        &self,
+        manga_ids: &[Uuid],
+    ) -> Result<ApiObjectResult<Vec<Uuid>>> {
+        let tokens = self.require_tokens()?;
+        let endpoint = self.base_url.join("/manga/read")?;
+
+        let res = self
+            .http
+            .get(endpoint)
+            .bearer_auth(&tokens.session)
+            .query(
+                &manga_ids
+                    .iter()
+                    .map(|id| ("ids", id))
+                    .collect::<Vec<(&str, &Uuid)>>(),
+            )
+            .send()
+            .await?;
+        let res = Self::deserialize_response::<_, ApiErrors>(res).await?;
+
+        Ok(res)
+    }
+
+    /// Get a random Manga
+    pub async fn random_manga(&self) -> Result<MangaResult> {
+        let endpoint = self.base_url.join("/manga/random")?;
+
+        let res = self.http.get(endpoint).send().await?;
+        let res = Self::deserialize_response::<MangaResult, ApiErrors>(res).await?;
+
+        Ok(res)
+    }
+
+    /// Get a random Manga
+    pub async fn tag_list(&self) -> Result<Vec<TagResult>> {
+        let endpoint = self.base_url.join("/manga/tag")?;
+
+        let res = self.http.get(endpoint).send().await?;
+        let res = Self::deserialize_response::<_, ApiErrors>(res).await?;
+
+        Ok(res)
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::ResourceType;
+
     use super::*;
     use chrono::prelude::*;
     use isolanguage_1::LanguageCode;
@@ -350,5 +508,13 @@ mod tests {
             manga.attributes.created_at,
             Utc.ymd(2019, 8, 25).and_hms(10, 51, 55)
         );
+    }
+
+    #[tokio::test]
+    async fn random_manga() {
+        let client = Client::new().unwrap();
+        let manga_result = client.random_manga().await.unwrap();
+        let manga = manga_result.data;
+        assert_eq!(manga.r#type, ResourceType::Manga);
     }
 }
