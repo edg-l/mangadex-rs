@@ -16,6 +16,7 @@ pub mod manga;
 pub mod user;
 
 pub use reqwest;
+pub use common::*;
 
 use errors::Result;
 use reqwest::{Response, Url};
