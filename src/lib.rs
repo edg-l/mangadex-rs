@@ -15,9 +15,9 @@ pub mod list;
 pub mod manga;
 pub mod user;
 
-pub use reqwest;
 pub use common::*;
 pub use isolanguage_1;
+pub use reqwest;
 
 use errors::Result;
 use reqwest::{Response, Url};

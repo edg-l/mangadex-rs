@@ -6,8 +6,8 @@ use crate::{
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 use serde_with::skip_serializing_none;
+use uuid::Uuid;
 
 #[derive(Debug, Deserialize)]
 pub struct ScanlationGroupAttributes {

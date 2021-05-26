@@ -1,6 +1,6 @@
+use isolanguage_1::LanguageCode;
 use serde::Deserialize;
 use uuid::Uuid;
-use isolanguage_1::LanguageCode;
 
 pub type LocalizedString = std::collections::HashMap<LanguageCode, String>;
 
