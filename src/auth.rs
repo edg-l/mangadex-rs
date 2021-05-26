@@ -1,4 +1,3 @@
-use super::jwt::*;
 use super::Client;
 use crate::common::*;
 use crate::errors::*;
@@ -100,8 +99,6 @@ impl Client {
             .bearer_auth(&tokens.session)
             .send()
             .await?;
-
-        println!("headers: {:#?}", res.headers());
 
         let res = Self::deserialize_response::<CheckTokenResponse, ApiErrors>(res).await?;
 

@@ -23,22 +23,22 @@ pub type ScanlationGroup = ApiObject<ScanlationGroupAttributes>;
 pub type ScanlationGroupResult = ApiObjectResult<ScanlationGroup>;
 pub type GroupResults = Results<ScanlationGroupResult>;
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Default)]
 pub struct GroupListRequest<'a> {
-    pub limit: i32,
-    pub offset: i32,
+    pub limit: Option<i32>,
+    pub offset: Option<i32>,
     /// Maximum 100 per request.
-    pub ids: &'a [Uuid],
-    pub name: &'a str,
+    pub ids: Option<&'a [Uuid]>,
+    pub name: Option<&'a str>,
 }
 
 impl<'a> GroupListRequest<'a> {
     pub fn new(limit: i32, offset: i32, ids: &'a [Uuid], name: &'a str) -> Self {
         Self {
-            limit,
-            offset,
-            ids,
-            name,
+            limit: Some(limit),
+            offset: Some(offset),
+            ids: Some(ids),
+            name: Some(name),
         }
     }
 }
@@ -210,5 +210,19 @@ impl Client {
         let res = Self::deserialize_response::<GroupResults, ApiErrors>(res).await?;
 
         Ok(res)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn list_group() {
+        let client = Client::new().unwrap();
+        let group_request = GroupListRequest::default();
+        let groups = client.list_group(&group_request).await.unwrap();
+        assert_eq!(groups.offset, 0);
+        assert_eq!(groups.limit, 10);
     }
 }

@@ -92,7 +92,7 @@ pub struct MangaQuery<'a> {
 #[serde(rename_all = "camelCase")]
 pub struct TagAttributes {
     pub name: LocalizedString,
-    // Known issue: empty descriptions return [] instead of {}
+    // TODO: Known issue: empty descriptions return [] instead of {}
     #[serde(skip)]
     pub description: LocalizedString,
     pub group: String,
@@ -129,7 +129,7 @@ pub struct Links {
 pub struct MangaAttributes {
     pub title: LocalizedString,
     pub alt_titles: Vec<LocalizedString>,
-    // Known issue: empty descriptions return [] instead of {}
+    // TODO: Known issue: empty descriptions return [] instead of {}
     #[serde(skip)]
     pub description: LocalizedString,
     pub is_locked: bool,
@@ -171,7 +171,8 @@ mod tests {
     async fn list_manga() {
         let client = Client::new().unwrap();
         let query = MangaQuery::default();
-        let mangas = client.list_manga(&query).await.unwrap();
-        println!("{:#?}", mangas);
+        let manga = client.list_manga(&query).await.unwrap();
+        assert_eq!(manga.offset, 0);
+        assert_eq!(manga.limit, 10);
     }
 }
