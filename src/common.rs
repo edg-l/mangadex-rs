@@ -1,7 +1,8 @@
 use serde::Deserialize;
 use uuid::Uuid;
+use isolanguage_1::LanguageCode;
 
-pub type LocalizedString = std::collections::HashMap<String, String>;
+pub type LocalizedString = std::collections::HashMap<LanguageCode, String>;
 
 #[derive(Debug, serde::Deserialize)]
 pub struct Relationship {

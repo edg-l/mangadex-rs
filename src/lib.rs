@@ -17,6 +17,7 @@ pub mod user;
 
 pub use reqwest;
 pub use common::*;
+pub use isolanguage_1;
 
 use errors::Result;
 use reqwest::{Response, Url};

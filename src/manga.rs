@@ -215,14 +215,14 @@ impl Client {
 
         Ok(res)
     }
-
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use pretty_assertions::assert_eq;
     use chrono::prelude::*;
+    use isolanguage_1::LanguageCode;
+    use pretty_assertions::assert_eq;
 
     #[tokio::test]
     async fn list_manga() {
@@ -242,11 +242,18 @@ mod tests {
         let manga = manga_result.data;
         assert_eq!(manga.id, id);
         assert_eq!(
-            manga.attributes.title.get("en").map(String::as_str),
+            manga
+                .attributes
+                .title
+                .get(&LanguageCode::En)
+                .map(String::as_str),
             Some("Solo Leveling")
         );
         assert_eq!(manga.attributes.original_language.as_str(), "ko");
         // 2019-08-25T10:51:55+00:00
-        assert_eq!(manga.attributes.created_at, Utc.ymd(2019, 8, 25).and_hms(10, 51, 55));
+        assert_eq!(
+            manga.attributes.created_at,
+            Utc.ymd(2019, 8, 25).and_hms(10, 51, 55)
+        );
     }
 }
