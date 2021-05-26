@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::{
     common::{ApiObject, ApiObjectResult, LocalizedString, Results},
     errors::{ApiErrors, Result},
-    Client,
+    Client, SimpleApiResponse,
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -206,12 +206,107 @@ impl Client {
         Ok(res)
     }
 
+    /// Update a manga.
+    ///
+    /// Requires auth.
+    pub async fn update_manga(&self, request: &MangaPayload) -> Result<MangaResult> {
+        let tokens = self.require_tokens()?;
+
+        let endpoint = self.base_url.join("/manga")?;
+
+        let res = self
+            .http
+            .put(endpoint)
+            .bearer_auth(&tokens.session)
+            .json(request)
+            .send()
+            .await?;
+        let res = Self::deserialize_response::<MangaResult, ApiErrors>(res).await?;
+
+        Ok(res)
+    }
+
     /// View a single manga.
     pub async fn view_manga(&self, id: &Uuid) -> Result<MangaResult> {
         let endpoint = self.base_url.join("/manga/")?.join(&format!("{}", id))?;
 
         let res = self.http.get(endpoint).send().await?;
         let res = Self::deserialize_response::<MangaResult, ApiErrors>(res).await?;
+
+        Ok(res)
+    }
+
+    /// Delete a manga.
+    ///
+    /// Requires auth.
+    pub async fn delete_manga(&self, id: &Uuid) -> Result<SimpleApiResponse> {
+        let tokens = self.require_tokens()?;
+
+        let endpoint = self.base_url.join("/manga/")?.join(&format!("{}", id))?;
+
+        let res = self
+            .http
+            .delete(endpoint)
+            .bearer_auth(&tokens.session)
+            .send()
+            .await?;
+        let res = Self::deserialize_response::<SimpleApiResponse, ApiErrors>(res).await?;
+
+        Ok(res)
+    }
+
+    /// Add manga to CustomList
+    ///
+    /// Requires auth.
+    pub async fn add_manga_to_custom_list(
+        &self,
+        manga_id: &Uuid,
+        list_id: &Uuid,
+    ) -> Result<SimpleApiResponse> {
+        let tokens = self.require_tokens()?;
+
+        let endpoint = self
+            .base_url
+            .join("/manga/")?
+            .join(&format!("{}/", manga_id))?
+            .join("list/")?
+            .join(&format!("{}", list_id))?;
+
+        let res = self
+            .http
+            .post(endpoint)
+            .bearer_auth(&tokens.session)
+            .send()
+            .await?;
+        let res = Self::deserialize_response::<SimpleApiResponse, ApiErrors>(res).await?;
+
+        Ok(res)
+    }
+
+    /// Remove manga from CustomList
+    ///
+    /// Requires auth.
+    pub async fn remove_manga_from_custom_list(
+        &self,
+        manga_id: &Uuid,
+        list_id: &Uuid,
+    ) -> Result<SimpleApiResponse> {
+        let tokens = self.require_tokens()?;
+
+        let endpoint = self
+            .base_url
+            .join("/manga/")?
+            .join(&format!("{}/", manga_id))?
+            .join("list/")?
+            .join(&format!("{}", list_id))?;
+
+        let res = self
+            .http
+            .delete(endpoint)
+            .bearer_auth(&tokens.session)
+            .send()
+            .await?;
+        let res = Self::deserialize_response::<SimpleApiResponse, ApiErrors>(res).await?;
 
         Ok(res)
     }
