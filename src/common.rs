@@ -49,10 +49,10 @@ pub struct SimpleApiResponse {
     result: ApiResult,
 }
 
-#[derive(Debug, serde::Serialize)]
+#[derive(Debug, serde::Serialize, Default)]
 pub struct ListRequest {
-    pub limit: i32,
-    pub offset: i32,
+    pub limit: Option<i32>,
+    pub offset: Option<i32>,
 }
 
 #[cfg(test)]
