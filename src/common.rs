@@ -1,13 +1,13 @@
 use isolanguage_1::LanguageCode;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 pub type LocalizedString = std::collections::HashMap<LanguageCode, String>;
 
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, Deserialize, PartialEq, Eq)]
 pub struct Relationship {
     pub id: Uuid,
-    pub r#type: String,
+    pub r#type: ResourceType,
 }
 
 /// Common values returned in the "result" field from most responses.
@@ -20,15 +20,15 @@ pub enum ApiResult {
     Error,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct ApiObject<T> {
     pub id: Uuid,
-    pub r#type: String,
+    pub r#type: ResourceType,
     pub attributes: T,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct ApiObjectResult<T> {
     pub result: ApiResult,
@@ -45,15 +45,30 @@ pub struct Results<T> {
 }
 
 /// A response for endpoints which only give a simple result.
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct SimpleApiResponse {
     result: ApiResult,
 }
 
-#[derive(Debug, serde::Serialize, Default)]
+#[derive(Debug, Serialize, Default)]
 pub struct ListRequest {
     pub limit: Option<i32>,
     pub offset: Option<i32>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum ResourceType {
+    #[serde(alias = "scanlation_group")]
+    Group,
+    Manga,
+    Chapter,
+    Tag,
+    MappingId,
+    Author,
+    Artist,
+    User,
+    CoverArt,
 }
 
 #[cfg(test)]
