@@ -32,7 +32,7 @@ Api reference: https://api.mangadex.org/docs.html
 
 ## Tests
 
-Tests that require making calls to the api are ignored by default, to run them you need to setup a .env file likes this:
+Tests that require making calls to the api while authed are ignored by default, to run them you need to setup a .env file likes this:
 
 ```bash
 TEST_MANGADEX_USERNAME="username"
