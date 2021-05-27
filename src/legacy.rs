@@ -3,7 +3,7 @@ use uuid::Uuid;
 
 use crate::{ApiData, ApiObject, Client, Result};
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, Hash, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum MappingType {
     Group,
@@ -12,14 +12,14 @@ pub enum MappingType {
     Tag,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone, Hash, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct MappingQuery {
     pub r#type: MappingType,
     pub ids: Vec<u32>,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, Hash, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum MappingIdType {
     MappingId,
@@ -28,7 +28,7 @@ pub enum MappingIdType {
 type MappingId = ApiObject<MappingIdAttributes, MappingIdType>;
 pub type MappingIdResponse = Result<ApiData<MappingId>>;
 
-#[derive(Debug, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Deserialize, Clone, Hash, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct MappingIdAttributes {
     pub r#type: MappingType,
@@ -52,7 +52,7 @@ mod tests {
 
     #[tokio::test]
     async fn legacy_mapping() {
-        let client = Client::new().unwrap();
+        let client = Client::default();
         let mapping = client
             .legacy_mapping(&MappingQuery {
                 r#type: MappingType::Manga,

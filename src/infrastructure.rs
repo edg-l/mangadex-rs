@@ -19,7 +19,7 @@ mod tests {
 
     #[tokio::test]
     async fn ping_server() {
-        let client = Client::new().unwrap();
+        let client = Client::default();
         client.ping().await.unwrap();
     }
 }

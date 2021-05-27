@@ -3,7 +3,7 @@ use crate::common::*;
 use crate::errors::*;
 use serde::{Deserialize, Serialize};
 
-// Tokens returned on login.
+/// Tokens returned on login.
 #[derive(Debug, Deserialize, Clone)]
 pub struct AuthTokens {
     /// A token that lives for 15 minutes.
@@ -25,7 +25,7 @@ struct LoginRequest<'a> {
 }
 
 /// Response when checking a token.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct CheckTokenResponse {
     pub is_authenticated: bool,
@@ -34,14 +34,14 @@ pub struct CheckTokenResponse {
 }
 
 /// Request payload to refresh the session token.
-#[derive(Debug, Serialize)]
+#[derive(Serialize)]
 struct RefreshTokenRequest<'a> {
     /// This token must be the refresh token.
     pub token: &'a str,
 }
 
 /// The response when refreshing the session token.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct RefreshTokenResponse {
     pub token: AuthTokens,
     pub message: Option<String>,
@@ -147,7 +147,7 @@ mod tests {
         }
         let auth_details = get_auth_details();
 
-        let mut client = Client::new().unwrap();
+        let mut client = Client::default();
         let res = client
             .login(&auth_details.0, &auth_details.1)
             .await
@@ -167,7 +167,7 @@ mod tests {
         }
         let tokens = get_tokens();
 
-        let mut client = Client::new().unwrap();
+        let mut client = Client::default();
         client.set_tokens(Some(tokens));
         client.check_token().await.unwrap();
     }
@@ -180,7 +180,7 @@ mod tests {
         }
         let tokens = get_tokens();
 
-        let mut client = Client::new().unwrap();
+        let mut client = Client::default();
         client.set_tokens(Some(tokens));
         client.refresh_token().await.unwrap();
     }

@@ -31,6 +31,7 @@ static APP_USER_AGENT: &str = concat!(
 );
 
 /// The client used to talk to the api.
+#[derive(Debug, Clone)]
 pub struct Client {
     http: reqwest::Client,
     base_url: Url,
@@ -45,7 +46,7 @@ enum ApiResult<T, E = ApiErrors> {
 }
 
 impl<T, E> ApiResult<T, E> {
-    pub fn into_result(self) -> Result<T, E> {
+    fn into_result(self) -> Result<T, E> {
         match self {
             ApiResult::Ok(val) => Ok(val),
             ApiResult::Error(err) => Err(err),
@@ -53,18 +54,22 @@ impl<T, E> ApiResult<T, E> {
     }
 }
 
+impl Default for Client {
+    fn default() -> Self {
+        Self::new("https://api.mangadex.org/").expect("Error creating default API client")
+    }
+}
+
 impl Client {
     /// Create a new client.
-    pub fn new() -> reqwest::Result<Self> {
+    pub fn new(base_url: &str) -> Result<Self> {
         let client = reqwest::Client::builder()
             .user_agent(APP_USER_AGENT)
             .build()?;
 
-        let base_url = Url::parse("https://api.mangadex.org/").expect("error parsing the base url");
-
         Ok(Self {
             http: client,
-            base_url,
+            base_url: Url::parse(base_url)?,
             tokens: None,
         })
     }
@@ -112,7 +117,6 @@ impl Client {
 mod tests {
     use super::*;
     use ctor::ctor;
-    use pretty_assertions::assert_eq;
 
     #[ctor]
     fn init() {
@@ -138,7 +142,6 @@ mod tests {
 
     #[test]
     fn client_new() {
-        let client = Client::new();
-        assert_eq!(client.is_ok(), true);
+        Client::default();
     }
 }
