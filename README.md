@@ -24,7 +24,7 @@ Api reference: https://api.mangadex.org/docs.html
 - CustomList ❌
 - Captcha ❌
 - AtHome ✅
-- Legacy ❌
+- Legacy ✅
 - Infrastructure ✅
 - Account ❌
 - User ❌
