@@ -1,7 +1,7 @@
 use crate::{
-    common::{ApiObject, LocalizedString, Results},
+    common::{deserialize_null_default, ApiObject, LocalizedString, Results},
     errors::Result,
-    ApiData, Client, NoData, PaginationQuery,
+    ApiData, Client, NoData, PaginationQuery, UrlSerdeQS,
 };
 use chrono::{DateTime, Utc};
 use derive_builder::Builder;
@@ -78,20 +78,47 @@ pub struct FeedOrder {
 #[builder(setter(into, strip_option), default)]
 pub struct MangaQuery {
     pub limit: Option<i32>,
+
     pub offset: Option<i32>,
+
     pub title: Option<String>,
-    pub authors: Option<Vec<Uuid>>,
-    pub artists: Option<Vec<Uuid>>,
+
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[builder(setter(each = "add_author"))]
+    pub authors: Vec<Uuid>,
+
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[builder(setter(each = "add_artist"))]
+    pub artists: Vec<Uuid>,
+
     pub year: Option<i32>,
-    pub included_tags: Option<Vec<Uuid>>,
+
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[builder(setter(each = "add_tag"))]
+    pub included_tags: Vec<Uuid>,
+
     pub included_tags_mode: Option<TagMode>,
-    pub status: Option<Vec<MangaStatus>>,
+
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[builder(setter(each = "add_status"))]
+    pub status: Vec<MangaStatus>,
+
     pub original_language: Option<String>,
-    pub publication_demographic: Option<Vec<Demographic>>,
-    pub ids: Option<Vec<Uuid>>,
+
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[builder(setter(each = "add_demographic"))]
+    pub publication_demographic: Vec<Demographic>,
+
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[builder(setter(each = "add_id"))]
+    pub ids: Vec<Uuid>,
+
     pub content_rating: Option<ContentRating>,
+
     pub created_at_since: Option<DateTime<Utc>>,
+
     pub updated_at_since: Option<DateTime<Utc>>,
+
     pub order: Option<Order>,
 }
 
@@ -157,7 +184,7 @@ pub struct MangaAttributes {
     #[serde(skip)]
     pub description: LocalizedString,
     pub is_locked: bool,
-    #[serde(default)]
+    #[serde(deserialize_with = "deserialize_null_default")]
     pub links: Links,
     pub original_language: String,
     pub last_volume: Option<String>,
@@ -265,8 +292,8 @@ pub type ChapterList = Results<ChapterResponse>;
 impl Client {
     /// List mangas.
     pub async fn list_manga(&self, query: &MangaQuery) -> Result<MangaList> {
-        let endpoint = self.base_url.join("/manga")?;
-        let res = self.http.get(endpoint).query(query).send().await?;
+        let endpoint = self.base_url.join("/manga")?.query_qs(query);
+        let res = self.http.get(endpoint).send().await?;
 
         Self::json_api_results(res).await
     }
@@ -452,18 +479,15 @@ impl Client {
     /// A list of chapter ids that are marked as read for the given manga ids
     pub async fn manga_read_markers_more(&self, manga_ids: &[Uuid]) -> Result<ApiData<Vec<Uuid>>> {
         let tokens = self.require_tokens()?;
-        let endpoint = self.base_url.join("/manga/read")?;
+        let endpoint = self
+            .base_url
+            .join("/manga/read")?
+            .query_qs(&MangaQueryBuilder::default().ids(manga_ids).build().unwrap());
 
         let res = self
             .http
             .get(endpoint)
             .bearer_auth(&tokens.session)
-            .query(
-                &manga_ids
-                    .iter()
-                    .map(|id| ("ids", id))
-                    .collect::<Vec<(&str, &Uuid)>>(),
-            )
             .send()
             .await?;
 
