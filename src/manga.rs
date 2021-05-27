@@ -11,7 +11,7 @@ use serde_with::skip_serializing_none;
 use uuid::Uuid;
 
 /// The tag mode.
-#[derive(Debug, Serialize, Clone, Copy, Hash, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, Hash, PartialEq, Eq)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum TagMode {
     // AND Mode
@@ -73,21 +73,21 @@ pub struct FeedOrder {
 }
 
 #[skip_serializing_none]
-#[derive(Debug, Default, Serialize, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Default, Serialize, Deserialize, Clone, Hash, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-pub struct MangaQuery<'a> {
+pub struct MangaQuery {
     pub limit: Option<i32>,
     pub offset: Option<i32>,
-    pub title: Option<&'a str>,
-    pub authors: Option<&'a [Uuid]>,
-    pub artists: Option<&'a [Uuid]>,
+    pub title: Option<String>,
+    pub authors: Option<Vec<Uuid>>,
+    pub artists: Option<Vec<Uuid>>,
     pub year: Option<i32>,
-    pub included_tags: Option<&'a [Uuid]>,
+    pub included_tags: Option<Vec<Uuid>>,
     pub included_tags_mode: Option<TagMode>,
-    pub status: Option<&'a [MangaStatus]>,
-    pub original_language: Option<&'a [&'a str]>,
-    pub publication_demographic: Option<&'a [Demographic]>,
-    pub ids: Option<&'a [Uuid]>,
+    pub status: Option<Vec<MangaStatus>>,
+    pub original_language: Option<String>,
+    pub publication_demographic: Option<Vec<Demographic>>,
+    pub ids: Option<Vec<Uuid>>,
     pub content_rating: Option<ContentRating>,
     pub created_at_since: Option<DateTime<Utc>>,
     pub updated_at_since: Option<DateTime<Utc>>,
@@ -224,7 +224,7 @@ pub type ChapterList = Results<ChapterResponse>;
 
 impl Client {
     /// List mangas.
-    pub async fn list_manga(&self, query: &MangaQuery<'_>) -> Result<MangaList> {
+    pub async fn list_manga(&self, query: &MangaQuery) -> Result<MangaList> {
         let endpoint = self.base_url.join("/manga")?;
         let res = self.http.get(endpoint).query(query).send().await?;
 

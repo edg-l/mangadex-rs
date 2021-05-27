@@ -4,7 +4,7 @@ use crate::errors::*;
 use serde::{Deserialize, Serialize};
 
 /// Tokens returned on login.
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AuthTokens {
     /// A token that lives for 15 minutes.
     pub session: String,
@@ -18,10 +18,10 @@ struct LoginResponse {
 }
 
 /// Request payload to login.
-#[derive(Serialize)]
-struct LoginRequest<'a> {
-    username: &'a str,
-    password: &'a str,
+#[derive(Serialize, Deserialize)]
+struct LoginRequest {
+    username: String,
+    password: String,
 }
 
 /// Response when checking a token.
@@ -34,14 +34,14 @@ pub struct CheckTokenResponse {
 }
 
 /// Request payload to refresh the session token.
-#[derive(Serialize)]
-struct RefreshTokenRequest<'a> {
+#[derive(Debug, Serialize, Deserialize, Clone)]
+struct RefreshTokenRequest {
     /// This token must be the refresh token.
-    pub token: &'a str,
+    pub token: String,
 }
 
 /// The response when refreshing the session token.
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct RefreshTokenResponse {
     pub token: AuthTokens,
     pub message: Option<String>,
@@ -52,15 +52,18 @@ impl Client {
     ///
     /// * `username` - Should be between [1, 64] characters.
     /// * `password` - Should be between [8, 1024] characters.
-    pub async fn login(&mut self, username: &str, password: &str) -> Result<AuthTokens> {
+    pub async fn login(&mut self, username: &str, password: &str) -> Result<&AuthTokens> {
         let endpoint = self.base_url.join("/auth/login")?;
-        let request = LoginRequest { username, password };
+        let request = LoginRequest {
+            username: username.to_string(),
+            password: password.to_string(),
+        };
 
         let res = self.http.post(endpoint).json(&request).send().await?;
         let res = Self::json_api_result::<LoginResponse>(res).await?;
 
-        self.set_tokens(Some(res.token.clone()));
-        Ok(res.token)
+        self.set_tokens(Some(res.token));
+        Ok(self.get_tokens().unwrap())
     }
 
     /// Get the tokens used for authentication
@@ -116,7 +119,7 @@ impl Client {
         let endpoint = self.base_url.join("/auth/refresh")?;
 
         let request = RefreshTokenRequest {
-            token: &tokens.refresh,
+            token: tokens.refresh.to_string(),
         };
 
         let res = self

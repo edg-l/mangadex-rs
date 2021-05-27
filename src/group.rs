@@ -30,39 +30,39 @@ pub type ScanlationGroupData = ApiData<ScanlationGroup>;
 pub type ScanlationGroupResponse = Result<ScanlationGroupData>;
 pub type ScanlationGroupList = Results<ScanlationGroupResponse>;
 
-#[derive(Debug, Serialize, Default)]
-pub struct GroupListRequest<'a> {
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct GroupListRequest {
     pub limit: Option<i32>,
     pub offset: Option<i32>,
     /// Maximum 100 per request.
-    pub ids: Option<&'a [Uuid]>,
-    pub name: Option<&'a str>,
+    pub ids: Option<Vec<Uuid>>,
+    pub name: Option<String>,
 }
 
-impl<'a> GroupListRequest<'a> {
-    pub fn new(limit: i32, offset: i32, ids: &'a [Uuid], name: &'a str) -> Self {
+impl GroupListRequest {
+    pub fn new(limit: i32, offset: i32, ids: Vec<Uuid>, name: &str) -> Self {
         Self {
             limit: Some(limit),
             offset: Some(offset),
             ids: Some(ids),
-            name: Some(name),
+            name: Some(name.to_string()),
         }
     }
 }
 
 #[skip_serializing_none]
-#[derive(Debug, Serialize)]
-pub struct CreateGroupRequest<'a> {
-    pub name: &'a str,
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct CreateGroupRequest {
+    pub name: String,
     pub leader: Option<Uuid>,
-    pub members: Option<&'a [Uuid]>,
+    pub members: Option<Vec<Uuid>>,
     pub version: i32,
 }
 
-impl<'a> CreateGroupRequest<'a> {
-    pub fn new(name: &'a str, leader: Option<Uuid>, members: Option<&'a [Uuid]>) -> Self {
+impl CreateGroupRequest {
+    pub fn new(name: &str, leader: Option<Uuid>, members: Option<Vec<Uuid>>) -> Self {
         Self {
-            name,
+            name: name.to_string(),
             leader,
             members,
             version: 1,
@@ -72,7 +72,7 @@ impl<'a> CreateGroupRequest<'a> {
 
 impl Client {
     /// Search for scanlation groups.
-    pub async fn list_group(&self, request: &GroupListRequest<'_>) -> Result<ScanlationGroupList> {
+    pub async fn list_group(&self, request: &GroupListRequest) -> Result<ScanlationGroupList> {
         let endpoint = self.base_url.join("/group")?;
         let res = self.http.get(endpoint).query(request).send().await?;
 
@@ -82,10 +82,7 @@ impl Client {
     /// Create a group.
     ///
     /// Requires auth.
-    pub async fn create_group(
-        &self,
-        request: &CreateGroupRequest<'_>,
-    ) -> Result<ScanlationGroupData> {
+    pub async fn create_group(&self, request: &CreateGroupRequest) -> Result<ScanlationGroupData> {
         let tokens = self.require_tokens()?;
         let endpoint = self.base_url.join("/group")?;
 
@@ -112,10 +109,7 @@ impl Client {
     /// Update a group.
     ///
     /// Requires auth.
-    pub async fn update_group(
-        &self,
-        request: &CreateGroupRequest<'_>,
-    ) -> Result<ScanlationGroupData> {
+    pub async fn update_group(&self, request: &CreateGroupRequest) -> Result<ScanlationGroupData> {
         let tokens = self.require_tokens()?;
 
         let endpoint = self.base_url.join("/group")?;
