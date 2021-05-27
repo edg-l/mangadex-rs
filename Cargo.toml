@@ -28,6 +28,8 @@ uuid = { version = "0.8", features = ["serde"] }
 isolanguage-1 = { version = "0.2", features = ["serde"] }
 
 [dev-dependencies]
+anyhow = "1.0.40"
+assert_matches = "1.5.0"
 ctor = "0.1"
 dotenv = "0.15"
 httpmock = "0.5.8"

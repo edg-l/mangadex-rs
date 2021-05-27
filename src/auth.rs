@@ -139,52 +139,70 @@ impl Client {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tests::*;
+    use assert_matches::assert_matches;
+    use httpmock::Method::POST;
+    use httpmock::MockServer;
+    use serde_json::json;
 
     #[tokio::test]
-    #[ignore = "require api auth"]
-    async fn endpoint_login() {
-        // Don't login again to avoid ratelimits
-        if has_tokens() {
-            return;
-        }
-        let auth_details = get_auth_details();
+    async fn login_ok() -> anyhow::Result<()> {
+        let server = MockServer::start_async().await;
 
-        let mut client = Client::default();
-        let res = client
-            .login(&auth_details.0, &auth_details.1)
-            .await
-            .unwrap();
+        let mock = server
+            .mock_async(|when, then| {
+                when.method(POST)
+                    .path("/auth/login")
+                    .header("Content-Type", "application/json")
+                    .json_body(json!({"username": "test", "password": "hunter1"}));
+                then.status(200)
+                    .header("Content-Type", "application/json")
+                    .json_body(json!({
+                        "result": "ok",
+                        "token": {
+                            "session": "sessiontoken",
+                            "refresh": "refreshtoken",
+                        }
+                    }));
+            })
+            .await;
 
-        assert!(!res.refresh.is_empty());
-        assert!(!res.session.is_empty());
+        let mut client = Client::new(&server.base_url())?;
 
-        client.check_token().await.unwrap();
+        let tokens = client.login("test", "hunter1").await?;
+
+        mock.assert_async().await;
+        assert_eq!(tokens.session.as_str(), "sessiontoken");
+        assert_eq!(tokens.refresh.as_str(), "refreshtoken");
+
+        Ok(())
     }
 
     #[tokio::test]
-    #[ignore = "require api auth"]
-    async fn endpoint_check_token() {
-        if !has_tokens() {
-            return;
-        }
-        let tokens = get_tokens();
+    async fn login_err() -> anyhow::Result<()> {
+        let server = MockServer::start_async().await;
 
-        let mut client = Client::default();
-        client.set_tokens(Some(tokens));
-        client.check_token().await.unwrap();
-    }
+        let mock = server
+            .mock_async(|when, then| {
+                when.method(POST)
+                    .path("/auth/login")
+                    .header("Content-Type", "application/json")
+                    .json_body(json!({"username": "test", "password": "hunter1"}));
+                then.status(400)
+                    .header("Content-Type", "application/json")
+                    .json_body(json!({
+                        "result": "error",
+                        "errors": [],
+                    }));
+            })
+            .await;
 
-    #[tokio::test]
-    #[ignore = "require api auth"]
-    async fn endpoint_refresh_token() {
-        if !has_tokens() {
-            return;
-        }
-        let tokens = get_tokens();
+        let mut client = Client::new(&server.base_url())?;
 
-        let mut client = Client::default();
-        client.set_tokens(Some(tokens));
-        client.refresh_token().await.unwrap();
+        let errors = client.login("test", "hunter1").await.expect_err("should return an error");
+
+        mock.assert_async().await;
+        assert_matches!(errors, Errors::HttpWithBody(x) if x.errors.is_empty());
+
+        Ok(())
     }
 }
