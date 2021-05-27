@@ -178,7 +178,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn login_err() -> anyhow::Result<()> {
+    async fn login_err_400() -> anyhow::Result<()> {
         let server = MockServer::start_async().await;
 
         let mock = server
@@ -198,10 +198,40 @@ mod tests {
 
         let mut client = Client::new(&server.base_url())?;
 
-        let errors = client.login("test", "hunter1").await.expect_err("should return an error");
+        let errors = client
+            .login("test", "hunter1")
+            .await
+            .expect_err("should return an error");
 
         mock.assert_async().await;
         assert_matches!(errors, Errors::HttpWithBody(x) if x.errors.is_empty());
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn login_err_401() -> anyhow::Result<()> {
+        let server = MockServer::start_async().await;
+
+        let mock = server
+            .mock_async(|when, then| {
+                when.method(POST)
+                    .path("/auth/login")
+                    .header("Content-Type", "application/json")
+                    .json_body(json!({"username": "test", "password": "hunter1"}));
+                then.status(401);
+            })
+            .await;
+
+        let mut client = Client::new(&server.base_url())?;
+
+        let errors = client
+            .login("test", "hunter1")
+            .await
+            .expect_err("should return an error");
+
+        mock.assert_async().await;
+        assert_matches!(errors, Errors::Http(_));
 
         Ok(())
     }
