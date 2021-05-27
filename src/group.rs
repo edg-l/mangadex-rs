@@ -1,5 +1,5 @@
 use crate::{
-    common::{PaginationQuery, Results},
+    common::{PaginationQuery, Results, UrlSerdeQS},
     errors::Result,
     user::User,
     ApiData, ApiObject, Client, NoData,
@@ -73,8 +73,9 @@ pub struct CreateGroupRequest {
 impl Client {
     /// Search for scanlation groups.
     pub async fn list_group(&self, request: &GroupListRequest) -> Result<ScanlationGroupList> {
-        let endpoint = self.base_url.join("/group")?;
-        let res = self.http.get(endpoint).query(request).send().await?;
+        let endpoint = self.base_url.join("/group")?.query_qs(request);
+
+        let res = self.http.get(endpoint).send().await?;
 
         Self::json_api_results(res).await
     }
@@ -190,12 +191,11 @@ impl Client {
     pub async fn followed_groups(&self, query: &PaginationQuery) -> Result<ScanlationGroupList> {
         let tokens = self.require_tokens()?;
 
-        let endpoint = self.base_url.join("/user/follows/group")?;
+        let endpoint = self.base_url.join("/user/follows/group")?.query_qs(query);
 
         let res = self
             .http
             .get(endpoint)
-            .query(&query)
             .bearer_auth(&tokens.session)
             .send()
             .await?;
