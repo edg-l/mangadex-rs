@@ -30,5 +30,6 @@ isolanguage-1 = { version = "0.2", features = ["serde"] }
 [dev-dependencies]
 ctor = "0.1"
 dotenv = "0.15"
+httpmock = "0.5.8"
 pretty_assertions = "0.7"
 serde_json = "1.0"
