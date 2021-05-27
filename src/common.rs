@@ -1,3 +1,4 @@
+use derive_builder::Builder;
 use isolanguage_1::LanguageCode;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -37,7 +38,8 @@ pub struct Results<T> {
     pub total: i32,
 }
 
-#[derive(Debug, Default, Serialize, Deserialize, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Builder, Default, Serialize, Deserialize, Clone, Hash, PartialEq, Eq)]
+#[builder(setter(into, strip_option), default)]
 pub struct PaginationQuery {
     pub limit: Option<i32>,
     pub offset: Option<i32>,

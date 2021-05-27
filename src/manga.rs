@@ -1,13 +1,13 @@
-use std::collections::HashMap;
-
 use crate::{
     common::{ApiObject, LocalizedString, Results},
     errors::Result,
     ApiData, Client, NoData, PaginationQuery,
 };
 use chrono::{DateTime, Utc};
+use derive_builder::Builder;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
+use std::collections::HashMap;
 use uuid::Uuid;
 
 /// The tag mode.
@@ -73,8 +73,9 @@ pub struct FeedOrder {
 }
 
 #[skip_serializing_none]
-#[derive(Debug, Default, Serialize, Deserialize, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Builder, Default, Serialize, Deserialize, Clone, Hash, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
+#[builder(setter(into, strip_option), default)]
 pub struct MangaQuery {
     pub limit: Option<i32>,
     pub offset: Option<i32>,
@@ -95,15 +96,26 @@ pub struct MangaQuery {
 }
 
 #[skip_serializing_none]
-#[derive(Debug, Serialize, Clone, PartialEq, Eq)]
+#[derive(Debug, Builder, Serialize, Clone, PartialEq, Eq)]
+#[builder(setter(into, strip_option))]
 #[serde(rename_all = "camelCase")]
 pub struct MangaFeedQuery {
     #[serde(flatten)]
     pub pagination: PaginationQuery,
+
+    #[builder(default)]
     pub translated_language: Option<Vec<String>>,
+
+    #[builder(default)]
     pub created_at_since: Option<DateTime<Utc>>,
+
+    #[builder(default)]
     pub updated_at_since: Option<DateTime<Utc>>,
+
+    #[builder(default)]
     pub publish_at_since: Option<DateTime<Utc>>,
+
+    #[builder(default)]
     pub order: Option<FeedOrder>,
 }
 
@@ -162,24 +174,52 @@ pub struct MangaAttributes {
 }
 
 #[skip_serializing_none]
-#[derive(Debug, Default, Serialize, Deserialize, Clone)]
+#[derive(Debug, Builder, Default, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
+#[builder(setter(into, strip_option))]
 pub struct MangaPayload {
     pub title: LocalizedString,
+
+    #[builder(default)]
     pub alt_titles: Option<Vec<LocalizedString>>,
+
+    #[builder(default)]
     pub description: Option<LocalizedString>,
+
+    #[builder(default)]
     pub authors: Option<Vec<Uuid>>,
+
+    #[builder(default)]
     pub artists: Option<Vec<Uuid>>,
+
+    #[builder(default)]
     pub links: Option<Links>,
+
+    #[builder(default)]
     pub original_language: Option<String>,
+
+    #[builder(default)]
     pub last_volume: Option<String>,
+
+    #[builder(default)]
     pub last_chapter: Option<String>,
+
+    #[builder(default)]
     pub publication_demographic: Option<Demographic>,
+
+    #[builder(default)]
     pub status: Option<MangaStatus>,
+
     /// Year of release
+    #[builder(default)]
     pub year: Option<i32>,
+
+    #[builder(default)]
     pub content_rating: Option<ContentRating>,
+
+    #[builder(default)]
     pub mod_notes: Option<String>,
+
     pub version: i32,
 }
 

@@ -5,6 +5,7 @@ use crate::{
     ApiData, ApiObject, Client, NoData,
 };
 use chrono::{DateTime, Utc};
+use derive_builder::Builder;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use uuid::Uuid;
@@ -30,12 +31,16 @@ pub type ScanlationGroupData = ApiData<ScanlationGroup>;
 pub type ScanlationGroupResponse = Result<ScanlationGroupData>;
 pub type ScanlationGroupList = Results<ScanlationGroupResponse>;
 
-#[derive(Debug, Serialize, Deserialize, Default)]
+#[derive(Debug, Builder, Serialize, Deserialize, Default)]
+#[builder(setter(into, strip_option), default)]
 pub struct GroupListRequest {
     pub limit: Option<i32>,
+
     pub offset: Option<i32>,
+
     /// Maximum 100 per request.
     pub ids: Option<Vec<Uuid>>,
+
     pub name: Option<String>,
 }
 
@@ -51,23 +56,18 @@ impl GroupListRequest {
 }
 
 #[skip_serializing_none]
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Builder, Serialize, Deserialize, Clone)]
+#[builder(setter(into, strip_option))]
 pub struct CreateGroupRequest {
     pub name: String,
-    pub leader: Option<Uuid>,
-    pub members: Option<Vec<Uuid>>,
-    pub version: i32,
-}
 
-impl CreateGroupRequest {
-    pub fn new(name: &str, leader: Option<Uuid>, members: Option<Vec<Uuid>>) -> Self {
-        Self {
-            name: name.to_string(),
-            leader,
-            members,
-            version: 1,
-        }
-    }
+    #[builder(default)]
+    pub leader: Option<Uuid>,
+
+    #[builder(default)]
+    pub members: Option<Vec<Uuid>>,
+
+    pub version: i32,
 }
 
 impl Client {
@@ -212,8 +212,11 @@ mod tests {
     #[tokio::test]
     async fn list_group() {
         let client = Client::default();
-        let group_request = GroupListRequest::default();
-        let groups = client.list_group(&group_request).await.unwrap();
+        let group_request = GroupListRequestBuilder::default();
+        let groups = client
+            .list_group(&group_request.build().unwrap())
+            .await
+            .unwrap();
         assert_eq!(groups.offset, 0);
         assert_eq!(groups.limit, 10);
     }

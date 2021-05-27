@@ -1,3 +1,4 @@
+use derive_builder::Builder;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -12,10 +13,14 @@ pub enum MappingType {
     Tag,
 }
 
-#[derive(Debug, Serialize, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Builder, Serialize, Clone, Hash, PartialEq, Eq)]
+#[builder(setter(into))]
 #[serde(rename_all = "camelCase")]
 pub struct MappingQuery {
+    #[builder(setter(name = "query_type"))]
     pub r#type: MappingType,
+
+    #[builder(setter(each = "add_id"))]
     pub ids: Vec<u32>,
 }
 
@@ -25,7 +30,7 @@ pub enum MappingIdType {
     MappingId,
 }
 
-type MappingId = ApiObject<MappingIdAttributes, MappingIdType>;
+pub type MappingId = ApiObject<MappingIdAttributes, MappingIdType>;
 pub type MappingIdResponse = Result<ApiData<MappingId>>;
 
 #[derive(Debug, Deserialize, Clone, Hash, PartialEq, Eq)]
