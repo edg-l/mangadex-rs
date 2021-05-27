@@ -1,8 +1,8 @@
 use crate::{
-    common::{ApiObject, ApiObjectResult, PaginationQuery, Results, SimpleApiResponse},
-    errors::{ApiErrors, Result},
+    common::{PaginationQuery, Results},
+    errors::Result,
     user::User,
-    Client,
+    ApiData, ApiObject, Client, NoData,
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -10,19 +10,25 @@ use serde_with::skip_serializing_none;
 use uuid::Uuid;
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ScanlationGroupAttributes {
     pub name: String,
     pub leader: User,
     pub version: i32,
-    #[serde(rename(deserialize = "createdAt"))]
     pub created_at: DateTime<Utc>,
-    #[serde(rename(deserialize = "updatedAt"))]
     pub updated_at: DateTime<Utc>,
 }
 
-pub type ScanlationGroup = ApiObject<ScanlationGroupAttributes>;
-pub type ScanlationGroupResult = ApiObjectResult<ScanlationGroup>;
-pub type GroupResults = Results<ScanlationGroupResult>;
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ScanlationGroupType {
+    ScanlationGroup,
+}
+
+pub type ScanlationGroup = ApiObject<ScanlationGroupAttributes, ScanlationGroupType>;
+pub type ScanlationGroupData = ApiData<ScanlationGroup>;
+pub type ScanlationGroupResponse = Result<ScanlationGroupData>;
+pub type ScanlationGroupList = Results<ScanlationGroupResponse>;
 
 #[derive(Debug, Serialize, Default)]
 pub struct GroupListRequest<'a> {
@@ -66,13 +72,12 @@ impl<'a> CreateGroupRequest<'a> {
 
 impl Client {
     /// Search for scanlation groups.
-    pub async fn list_group(&self, request: &GroupListRequest<'_>) -> Result<GroupResults> {
+    pub async fn list_group(&self, request: &GroupListRequest<'_>) -> Result<ScanlationGroupList> {
         let endpoint = self.base_url.join("/group")?;
 
         let res = self.http.get(endpoint).query(request).send().await?;
-        let res = Self::deserialize_response::<GroupResults, ApiErrors>(res).await?;
 
-        Ok(res)
+        Self::json_api_results(res).await
     }
 
     /// Create a group.
@@ -81,9 +86,8 @@ impl Client {
     pub async fn create_group(
         &self,
         request: &CreateGroupRequest<'_>,
-    ) -> Result<ScanlationGroupResult> {
+    ) -> Result<ScanlationGroupData> {
         let tokens = self.require_tokens()?;
-
         let endpoint = self.base_url.join("/group")?;
 
         let res = self
@@ -93,19 +97,17 @@ impl Client {
             .json(&request)
             .send()
             .await?;
-        let res = Self::deserialize_response::<ScanlationGroupResult, ApiErrors>(res).await?;
 
-        Ok(res)
+        Self::json_api_result(res).await
     }
 
     /// View a group.
-    pub async fn view_group(&self, id: &Uuid) -> Result<ScanlationGroupResult> {
+    pub async fn view_group(&self, id: &Uuid) -> Result<ScanlationGroupData> {
         let endpoint = self.base_url.join(&format!("/group/{:x}", id))?;
 
         let res = self.http.get(endpoint).send().await?;
-        let res = Self::deserialize_response::<ScanlationGroupResult, ApiErrors>(res).await?;
 
-        Ok(res)
+        Self::json_api_result(res).await
     }
 
     /// Update a group.
@@ -114,7 +116,7 @@ impl Client {
     pub async fn update_group(
         &self,
         request: &CreateGroupRequest<'_>,
-    ) -> Result<ScanlationGroupResult> {
+    ) -> Result<ScanlationGroupData> {
         let tokens = self.require_tokens()?;
 
         let endpoint = self.base_url.join("/group")?;
@@ -126,15 +128,14 @@ impl Client {
             .json(&request)
             .send()
             .await?;
-        let res = Self::deserialize_response::<ScanlationGroupResult, ApiErrors>(res).await?;
 
-        Ok(res)
+        Self::json_api_result(res).await
     }
 
     /// Delete a group.
     ///
     /// Requires auth.
-    pub async fn delete_group(&self, id: &Uuid) -> Result<SimpleApiResponse> {
+    pub async fn delete_group(&self, id: &Uuid) -> Result<()> {
         let tokens = self.require_tokens()?;
 
         let mut buffer = Uuid::encode_buffer();
@@ -147,15 +148,15 @@ impl Client {
             .bearer_auth(&tokens.session)
             .send()
             .await?;
-        let res = Self::deserialize_response::<SimpleApiResponse, ApiErrors>(res).await?;
 
-        Ok(res)
+        Self::json_api_result::<NoData>(res).await?;
+        Ok(())
     }
 
     /// Follow a group.
     ///
     /// Requires auth.
-    pub async fn follow_group(&self, id: &Uuid) -> Result<SimpleApiResponse> {
+    pub async fn follow_group(&self, id: &Uuid) -> Result<()> {
         let tokens = self.require_tokens()?;
 
         let endpoint = self.base_url.join(&format!("/group/{:x}/follow", id))?;
@@ -166,15 +167,15 @@ impl Client {
             .bearer_auth(&tokens.session)
             .send()
             .await?;
-        let res = Self::deserialize_response::<SimpleApiResponse, ApiErrors>(res).await?;
 
-        Ok(res)
+        Self::json_api_result::<NoData>(res).await?;
+        Ok(())
     }
 
     /// Unfollow a group.
     ///
     /// Requires auth.
-    pub async fn unfollow_group(&self, id: &Uuid) -> Result<SimpleApiResponse> {
+    pub async fn unfollow_group(&self, id: &Uuid) -> Result<()> {
         let tokens = self.require_tokens()?;
 
         let endpoint = self.base_url.join(&format!("/group/{:x}/follow", id))?;
@@ -185,15 +186,15 @@ impl Client {
             .bearer_auth(&tokens.session)
             .send()
             .await?;
-        let res = Self::deserialize_response::<SimpleApiResponse, ApiErrors>(res).await?;
 
-        Ok(res)
+        Self::json_api_result::<NoData>(res).await?;
+        Ok(())
     }
 
     /// List the followed groups by the logged user.
     ///
     /// Requires auth.
-    pub async fn followed_groups(&self, query: &PaginationQuery) -> Result<GroupResults> {
+    pub async fn followed_groups(&self, query: &PaginationQuery) -> Result<ScanlationGroupList> {
         let tokens = self.require_tokens()?;
 
         let endpoint = self.base_url.join("/user/follows/group")?;
@@ -205,9 +206,8 @@ impl Client {
             .bearer_auth(&tokens.session)
             .send()
             .await?;
-        let res = Self::deserialize_response::<GroupResults, ApiErrors>(res).await?;
 
-        Ok(res)
+        Self::json_api_results(res).await
     }
 }
 

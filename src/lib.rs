@@ -19,9 +19,9 @@ pub use common::*;
 pub use isolanguage_1;
 pub use reqwest;
 
-use errors::Result;
+use errors::{ApiErrors, Result};
 use reqwest::{Response, Url};
-use serde::de::DeserializeOwned;
+use serde::{de::DeserializeOwned, Deserialize};
 
 static APP_USER_AGENT: &str = concat!(
     env!("CARGO_PKG_NAME"),
@@ -35,6 +35,22 @@ pub struct Client {
     http: reqwest::Client,
     base_url: Url,
     tokens: Option<auth::AuthTokens>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", tag = "result")]
+enum ApiResult<T, E = ApiErrors> {
+    Ok(T),
+    Error(E),
+}
+
+impl<T, E> ApiResult<T, E> {
+    pub fn into_result(self) -> Result<T, E> {
+        match self {
+            ApiResult::Ok(val) => Ok(val),
+            ApiResult::Error(err) => Err(err),
+        }
+    }
 }
 
 impl Client {
@@ -53,24 +69,42 @@ impl Client {
         })
     }
 
-    async fn deserialize_response<T, E>(res: Response) -> Result<T>
+    /// Deserialize ApiResult<T> then convert to Result<T>
+    async fn json_api_result<T>(res: Response) -> Result<T>
     where
         T: DeserializeOwned,
-        E: DeserializeOwned + Into<errors::Errors>,
     {
-        let status = res.status();
+        Ok(res.json::<ApiResult<T, ApiErrors>>().await?.into_result()?)
+    }
 
-        if !status.is_success() {
-            match res.error_for_status_ref() {
-                Err(err) => match res.json::<E>().await {
-                    Ok(value) => Err(value.into()),
-                    Err(_decode_err) => Err(err.into()),
-                },
-                _ => unreachable!("this shouldn't be reachable."),
-            }
-        } else {
-            Ok(res.json::<T>().await?)
-        }
+    /// Deserialize as Results<ApiResult<T>> then convert to Results<Result<T>>
+    async fn json_api_results<T>(res: Response) -> Result<Results<Result<T>>>
+    where
+        T: DeserializeOwned,
+    {
+        let res = res.json::<Results<ApiResult<T, ApiErrors>>>().await?;
+        Ok(Results {
+            results: res
+                .results
+                .into_iter()
+                .map(|r| r.into_result().map_err(|e| e.into()))
+                .collect(),
+            offset: res.offset,
+            limit: res.limit,
+            total: res.total,
+        })
+    }
+
+    /// Deserialize as Vec<ApiResult<T>> then convert to Vec<Result<T>>
+    async fn json_api_result_vec<T>(res: Response) -> Result<Vec<Result<T>>>
+    where
+        T: DeserializeOwned,
+    {
+        let res = res.json::<Vec<ApiResult<T, ApiErrors>>>().await?;
+        Ok(res
+            .into_iter()
+            .map(|r| r.into_result().map_err(|e| e.into()))
+            .collect())
     }
 }
 

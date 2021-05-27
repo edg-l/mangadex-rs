@@ -1,4 +1,4 @@
-use crate::{errors::ApiErrors, Client, Result};
+use crate::{Client, Result};
 use reqwest::Url;
 use serde::Deserialize;
 use uuid::Uuid;
@@ -23,7 +23,7 @@ impl Client {
         }
 
         let res = self.http.get(endpoint).send().await?;
-        let res = Self::deserialize_response::<AtHomeServer, ApiErrors>(res).await?;
+        let res = res.json::<AtHomeServer>().await?;
 
         Ok(Url::parse(&res.base_url)?)
     }

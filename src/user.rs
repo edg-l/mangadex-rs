@@ -1,5 +1,5 @@
+use crate::ApiObject;
 use serde::Deserialize;
-use uuid::Uuid;
 
 #[derive(Debug, Deserialize)]
 pub struct UserAttributes {
@@ -8,8 +8,9 @@ pub struct UserAttributes {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct User {
-    pub id: Uuid,
-    pub r#type: String,
-    pub attributes: UserAttributes,
+#[serde(rename_all = "snake_case")]
+pub enum UserType {
+    User,
 }
+
+pub type User = ApiObject<UserAttributes, UserType>;
