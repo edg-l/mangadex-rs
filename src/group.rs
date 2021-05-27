@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use uuid::Uuid;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone, Hash, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct ScanlationGroupAttributes {
     pub name: String,
@@ -19,7 +19,7 @@ pub struct ScanlationGroupAttributes {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone, Copy, Hash, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum ScanlationGroupType {
     ScanlationGroup,
@@ -74,7 +74,6 @@ impl Client {
     /// Search for scanlation groups.
     pub async fn list_group(&self, request: &GroupListRequest<'_>) -> Result<ScanlationGroupList> {
         let endpoint = self.base_url.join("/group")?;
-
         let res = self.http.get(endpoint).query(request).send().await?;
 
         Self::json_api_results(res).await
@@ -218,7 +217,7 @@ mod tests {
 
     #[tokio::test]
     async fn list_group() {
-        let client = Client::new().unwrap();
+        let client = Client::default();
         let group_request = GroupListRequest::default();
         let groups = client.list_group(&group_request).await.unwrap();
         assert_eq!(groups.offset, 0);

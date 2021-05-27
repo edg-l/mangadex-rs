@@ -3,7 +3,7 @@ use reqwest::Url;
 use serde::Deserialize;
 use uuid::Uuid;
 
-#[derive(Debug, Deserialize)]
+#[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct AtHomeServer {
     base_url: String,
@@ -36,7 +36,7 @@ mod tests {
 
     #[tokio::test]
     async fn at_home() {
-        let client = Client::new().unwrap();
+        let client = Client::default();
         let chapter_uuid = uuid::Uuid::parse_str("0e94efb5-6cb5-49fd-b522-51b4460c9821").unwrap();
 
         client.at_home(&chapter_uuid, false).await.unwrap();
@@ -44,7 +44,7 @@ mod tests {
 
     #[tokio::test]
     async fn at_home_force443() {
-        let client = Client::new().unwrap();
+        let client = Client::default();
         let chapter_uuid = uuid::Uuid::parse_str("0e94efb5-6cb5-49fd-b522-51b4460c9821").unwrap();
 
         let url = client.at_home(&chapter_uuid, true).await.unwrap();

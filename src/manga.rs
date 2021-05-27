@@ -11,7 +11,7 @@ use serde_with::skip_serializing_none;
 use uuid::Uuid;
 
 /// The tag mode.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Serialize, Clone, Copy, Hash, PartialEq, Eq)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum TagMode {
     // AND Mode
@@ -21,7 +21,7 @@ pub enum TagMode {
 }
 
 /// The status of a manga.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, Hash, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum MangaStatus {
     Ongoing,
@@ -31,7 +31,7 @@ pub enum MangaStatus {
 }
 
 /// The publication demographic.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, Hash, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum Demographic {
     Shounen,
@@ -42,7 +42,7 @@ pub enum Demographic {
 }
 
 /// The content rating of the publication.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, Hash, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum ContentRating {
     Safe,
@@ -51,21 +51,21 @@ pub enum ContentRating {
     Pornographic,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, Hash, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum OrderType {
     Asc,
     Desc,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Serialize, Deserialize, Clone, Hash, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct Order {
     pub created_at: OrderType,
     pub updated_at: OrderType,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Serialize, Deserialize, Clone, Hash, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct FeedOrder {
     pub volume: OrderType,
@@ -73,7 +73,7 @@ pub struct FeedOrder {
 }
 
 #[skip_serializing_none]
-#[derive(Debug, Serialize, Default)]
+#[derive(Debug, Default, Serialize, Clone, Hash, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct MangaQuery<'a> {
     pub limit: Option<i32>,
@@ -95,7 +95,7 @@ pub struct MangaQuery<'a> {
 }
 
 #[skip_serializing_none]
-#[derive(Debug, Serialize, Default)]
+#[derive(Debug, Serialize, Clone, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct MangaFeedQuery {
     #[serde(flatten)]
@@ -107,7 +107,7 @@ pub struct MangaFeedQuery {
     pub order: Option<FeedOrder>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct TagAttributes {
     pub name: LocalizedString,
@@ -119,7 +119,7 @@ pub struct TagAttributes {
 }
 
 #[skip_serializing_none]
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Default, Serialize, Deserialize, Clone)]
 pub struct Links {
     pub al: Option<String>,
     pub ap: Option<String>,
@@ -136,7 +136,7 @@ pub struct Links {
     extra: HashMap<String, String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct MangaAttributes {
     pub title: LocalizedString,
@@ -162,7 +162,7 @@ pub struct MangaAttributes {
 }
 
 #[skip_serializing_none]
-#[derive(Debug, Serialize, Default)]
+#[derive(Debug, Default, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct MangaPayload {
     pub title: LocalizedString,
@@ -183,7 +183,7 @@ pub struct MangaPayload {
     pub version: i32,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ChapterAttributes {
     pub title: String,
@@ -199,15 +199,15 @@ pub struct ChapterAttributes {
     pub publish_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct MangaReadingStatuses {
+struct MangaReadingStatuses {
     pub statuses: HashMap<Uuid, MangaStatus>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct MangaReadingStatus {
+struct MangaReadingStatus {
     pub status: MangaStatus,
 }
 
@@ -464,7 +464,7 @@ impl Client {
     pub async fn all_manga_reading_status(
         &self,
         status: Option<MangaStatus>,
-    ) -> Result<MangaReadingStatuses> {
+    ) -> Result<HashMap<Uuid, MangaStatus>> {
         let tokens = self.require_tokens()?;
         let endpoint = self.base_url.join("/manga/status")?;
 
@@ -475,10 +475,12 @@ impl Client {
 
         let res = req.send().await?;
 
-        Self::json_api_result(res).await
+        Self::json_api_result::<MangaReadingStatuses>(res)
+            .await
+            .map(|s| s.statuses)
     }
 
-    pub async fn manga_reading_status(&self, manga_id: &Uuid) -> Result<MangaReadingStatus> {
+    pub async fn manga_reading_status(&self, manga_id: &Uuid) -> Result<MangaStatus> {
         let tokens = self.require_tokens()?;
         let endpoint = self
             .base_url
@@ -491,7 +493,9 @@ impl Client {
             .send()
             .await?;
 
-        Self::json_api_result(res).await
+        Self::json_api_result::<MangaReadingStatus>(res)
+            .await
+            .map(|s| s.status)
     }
 
     pub async fn update_manga_reading_status(
@@ -532,7 +536,7 @@ mod tests {
 
     #[tokio::test]
     async fn list_manga() {
-        let client = Client::new().unwrap();
+        let client = Client::default();
         let query = MangaQuery::default();
         let manga = client.list_manga(&query).await.unwrap();
         assert_eq!(manga.offset, 0);
@@ -542,7 +546,7 @@ mod tests {
     #[tokio::test]
     async fn view_manga() {
         let id = Uuid::parse_str("32d76d19-8a05-4db0-9fc2-e0b0648fe9d0").unwrap();
-        let client = Client::new().unwrap();
+        let client = Client::default();
         let manga_result = client.view_manga(&id).await.unwrap();
 
         let manga = manga_result.data;
@@ -565,7 +569,7 @@ mod tests {
 
     #[tokio::test]
     async fn random_manga() {
-        let client = Client::new().unwrap();
+        let client = Client::default();
         let manga_result = client.random_manga().await.unwrap();
         let manga = manga_result.data;
         assert_eq!(manga.r#type, ResourceType::Manga);
@@ -573,7 +577,7 @@ mod tests {
 
     #[tokio::test]
     async fn tag_list() {
-        let client = Client::new().unwrap();
+        let client = Client::default();
         let tag_results = client.tag_list().await.unwrap();
 
         for result in &tag_results {

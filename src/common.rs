@@ -4,13 +4,13 @@ use uuid::Uuid;
 
 pub type LocalizedString = std::collections::HashMap<LanguageCode, String>;
 
-#[derive(Debug, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize, Clone, Hash, PartialEq, Eq)]
 pub struct Relationship {
     pub id: Uuid,
     pub r#type: ResourceType,
 }
 
-#[derive(Debug, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Default, Serialize, Deserialize, Clone, Hash, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct ApiData<T> {
     pub data: T,
@@ -18,7 +18,7 @@ pub struct ApiData<T> {
     pub relationships: Vec<Relationship>,
 }
 
-#[derive(Debug, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Default, Serialize, Deserialize, Clone, Hash, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct ApiObject<A, T = ResourceType> {
     pub id: Uuid,
@@ -26,10 +26,10 @@ pub struct ApiObject<A, T = ResourceType> {
     pub attributes: A,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Default, Serialize, Deserialize, Clone, Hash, PartialEq, Eq)]
 pub struct NoData;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone, Hash, PartialEq, Eq)]
 pub struct Results<T> {
     pub results: Vec<T>,
     pub limit: i32,
@@ -37,13 +37,13 @@ pub struct Results<T> {
     pub total: i32,
 }
 
-#[derive(Debug, Serialize, Default)]
+#[derive(Debug, Default, Serialize, Deserialize, Clone, Hash, PartialEq, Eq)]
 pub struct PaginationQuery {
     pub limit: Option<i32>,
     pub offset: Option<i32>,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, Hash, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum ResourceType {
     Manga,

@@ -3,7 +3,7 @@ use jwt::Token;
 use serde::Deserialize;
 use uuid::Uuid;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone, Hash, PartialEq, Eq)]
 pub struct RefreshTokenClaims {
     /// Type
     pub typ: String,
@@ -23,7 +23,7 @@ pub struct RefreshTokenClaims {
     pub sid: Uuid,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone, Hash, PartialEq, Eq)]
 pub struct SessionTokenClaims {
     /// Type
     pub typ: String,
