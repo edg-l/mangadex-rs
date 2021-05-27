@@ -123,23 +123,6 @@ mod tests {
         dotenv::dotenv().ok();
     }
 
-    pub fn has_tokens() -> bool {
-        std::env::var("TEST_MANGADEX_TOKEN_REFRESH").is_ok()
-    }
-
-    pub fn get_tokens() -> auth::AuthTokens {
-        auth::AuthTokens {
-            refresh: std::env::var("TEST_MANGADEX_TOKEN_REFRESH").unwrap(),
-            session: std::env::var("TEST_MANGADEX_TOKEN_SESSION").unwrap(),
-        }
-    }
-
-    pub fn get_auth_details() -> (String, String) {
-        let username = std::env::var("TEST_MANGADEX_USERNAME").unwrap();
-        let password = std::env::var("TEST_MANGADEX_PASSWORD").unwrap();
-        (username, password)
-    }
-
     #[test]
     fn client_new() {
         Client::default();
