@@ -505,7 +505,12 @@ mod tests {
                 let errors = client.refresh_token().await.expect_err("expected error");
 
                 mock.assert_async().await;
-                assert_matches!(errors, Errors::HttpWithBody(errs) if errs.errors.len() == 0usize);
+                assert_matches!(errors, Errors::HttpWithBody(errs) if errs.errors.len() == 0usize => {
+                    assert_eq!(errs.message.unwrap().as_str(), "Some message");
+                    let tokens = errs.token.unwrap();
+                    assert_eq!(tokens.session, "sessiontoken");
+                    assert_eq!(tokens.refresh, "refreshtoken");
+                });
 
                 Ok(())
             }
