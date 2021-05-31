@@ -26,7 +26,7 @@ Api reference: https://api.mangadex.org/docs.html
 - AtHome ✅
 - Legacy ✅
 - Infrastructure ✅
-- Account ❌
+- Account ✅
 - User ❌
 - Chapter ❌
 
