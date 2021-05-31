@@ -28,6 +28,7 @@ uuid = { version = "0.8", features = ["serde"] }
 isolanguage-1 = { version = "0.2", features = ["serde"] }
 derive_builder = "0.10"
 serde_qs = "0.8"
+serde_json = "1.0"
 
 [dev-dependencies]
 anyhow = "1.0.40"
@@ -36,4 +37,3 @@ ctor = "0.1"
 dotenv = "0.15"
 httpmock = "0.5.8"
 pretty_assertions = "0.7"
-serde_json = "1.0"

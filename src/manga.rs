@@ -77,9 +77,8 @@ pub struct FeedOrder {
 #[serde(rename_all = "camelCase")]
 #[builder(setter(into, strip_option), default)]
 pub struct MangaQuery {
-    pub limit: Option<i32>,
-
-    pub offset: Option<i32>,
+    #[serde(flatten)]
+    pub pagination: PaginationQuery,
 
     pub title: Option<String>,
 
@@ -318,9 +317,9 @@ impl Client {
     /// Update a manga.
     ///
     /// Requires auth.
-    pub async fn update_manga(&self, request: &MangaPayload) -> MangaResponse {
+    pub async fn update_manga(&self, id: &Uuid, request: &MangaPayload) -> MangaResponse {
         let tokens = self.require_tokens()?;
-        let endpoint = self.base_url.join("/manga")?;
+        let endpoint = self.base_url.join(&format!("/manga/{:x}", id))?;
         let res = self
             .http
             .put(endpoint)

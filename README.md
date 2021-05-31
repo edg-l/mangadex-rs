@@ -17,7 +17,7 @@ Api reference: https://api.mangadex.org/docs.html
 - Auth ✅
 - Rate limits ❌
 - Manga ✅
-- Author ❌
+- Author ✅
 - Search ❌
 - Scanlationgroup ✅
 - Feed ❌

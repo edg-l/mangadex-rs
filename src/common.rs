@@ -45,6 +45,13 @@ pub struct PaginationQuery {
     pub offset: Option<i32>,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, Hash, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum OrderType {
+    Asc,
+    Desc,
+}
+
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Hash, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum ResourceType {
