@@ -6,7 +6,6 @@ pub mod captcha;
 pub mod chapter;
 pub mod common;
 pub mod errors;
-pub mod feed;
 pub mod group;
 pub mod infrastructure;
 pub mod jwt;

@@ -20,7 +20,7 @@ Api reference: https://api.mangadex.org/docs.html
 - Author ✅
 - Search ❌
 - Scanlationgroup ✅
-- Feed ❌
+- Feed ✅
 - CustomList ❌
 - Captcha ❌
 - AtHome ✅

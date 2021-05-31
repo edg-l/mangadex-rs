@@ -460,6 +460,18 @@ impl Client {
         Self::json_api_results(res).await
     }
 
+    /// CustomList manga feed.
+    pub async fn custom_list_manga_feed(
+        &self,
+        list_id: &Uuid,
+        query: &MangaFeedQuery,
+    ) -> Result<ChapterList> {
+        let endpoint = self.base_url.join(&format!("/list/{:x}/feed", list_id))?;
+        let res = self.http.get(endpoint).json(query).send().await?;
+
+        Self::json_api_results(res).await
+    }
+
     /// A list of chapter ids that are marked as read for the specified manga
     pub async fn manga_read_markers(&self, manga_id: &Uuid) -> Result<ApiData<Vec<Uuid>>> {
         let tokens = self.require_tokens()?;
