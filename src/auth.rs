@@ -367,8 +367,8 @@ mod tests {
         assert_matches!(errors, Errors::HttpWithBody(errs) if errs.errors.len() == 1usize => {
             let error = errs.errors.get(0).unwrap();
             assert_eq!(error.id, uuid::Uuid::parse_str("5e50fc7b-e185-45b1-a692-58e8091b22d2")?);
-            assert_eq!(error.title.as_ref().unwrap().as_str(), "The service is unavailable");
-            assert_eq!(error.detail.as_ref().unwrap().as_str(), "Servers are burning");
+            assert_eq!(error.title.as_deref(), Some("The service is unavailable"));
+            assert_eq!(error.detail.as_deref(), Some("Servers are burning"));
             assert_eq!(error.status, 503);
         });
 
@@ -461,8 +461,8 @@ mod tests {
                 assert_matches!(errors, Errors::HttpWithBody(errs) if errs.errors.len() == 1usize => {
                     let error = errs.errors.get(0).unwrap();
                     assert_eq!(error.id, uuid::Uuid::parse_str("5e50fc7b-e185-45b1-a692-58e8091b22d2")?);
-                    assert_eq!(error.title.as_ref().unwrap().as_str(), "Error title");
-                    assert_eq!(error.detail.as_ref().unwrap().as_str(), "Error detail");
+                    assert_eq!(error.title.as_deref(), Some("Error title"));
+                    assert_eq!(error.detail.as_deref(), Some("Error detail"));
                     assert_eq!(error.status, $code);
                 });
 

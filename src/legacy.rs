@@ -53,20 +53,56 @@ impl Client {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use httpmock::{Method::POST, MockServer};
     use pretty_assertions::assert_eq;
+    use serde_json::json;
 
     #[tokio::test]
     async fn legacy_mapping() {
-        let client = Client::default();
-        let mapping = client
+        let server = MockServer::start_async().await;
+        let mock = server
+            .mock_async(|when, then| {
+                when.method(POST)
+                    .path("/legacy/mapping")
+                    .header("Content-Type", "application/json")
+                    .json_body(json!({
+                        "type": "manga",
+                        "ids": [1]
+                    }));
+                then.header("Content-Type", "application/json")
+                    .json_body(json!([
+                        {
+                            "result": "ok",
+                            "data": {
+                                "id": "24b6d026-a7cb-498e-8717-26b2831cf318",
+                                "type": "mapping_id",
+                                "attributes": {
+                                    "type": "manga",
+                                    "legacyId": 1,
+                                    "newId": "c0ee660b-f9f2-45c3-8068-5123ff53f84a",
+                                },
+                            }
+                        }
+                    ]));
+            })
+            .await;
+
+        let client = Client::new(&server.base_url()).unwrap();
+        let mappings = client
             .legacy_mapping(&MappingQuery {
                 r#type: MappingType::Manga,
                 ids: vec![1],
             })
             .await
-            .unwrap();
+            .expect("Failed to parse");
+
+        mock.assert_async().await;
+        assert_eq!(mappings.len(), 1);
+
+        let mapping = mappings[0].as_ref().unwrap();
+        assert_eq!(mapping.relationships.len(), 0);
         assert_eq!(
-            mapping[0].as_ref().unwrap().data,
+            mapping.data,
             MappingId {
                 id: Uuid::parse_str("24b6d026-a7cb-498e-8717-26b2831cf318").unwrap(),
                 r#type: MappingIdType::MappingId,
@@ -76,6 +112,6 @@ mod tests {
                     new_id: Uuid::parse_str("c0ee660b-f9f2-45c3-8068-5123ff53f84a").unwrap()
                 }
             }
-        )
+        );
     }
 }
