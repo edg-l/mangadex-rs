@@ -38,18 +38,21 @@ pub struct Client {
 }
 
 #[derive(Deserialize)]
-#[serde(rename_all = "camelCase", tag = "result")]
-enum ApiResult<T, E = ApiErrors> {
+#[serde(tag = "result", remote = "std::result::Result")]
+enum ApiResultDef<T, E> {
+    #[serde(rename = "ok")]
     Ok(T),
-    Error(E),
+    #[serde(rename = "error")]
+    Err(E),
 }
+
+#[derive(Deserialize)]
+#[serde(bound = "T: DeserializeOwned, E: DeserializeOwned")]
+struct ApiResult<T, E = ApiErrors>(#[serde(with = "ApiResultDef")] std::result::Result<T, E>);
 
 impl<T, E> ApiResult<T, E> {
     fn into_result(self) -> Result<T, E> {
-        match self {
-            ApiResult::Ok(val) => Ok(val),
-            ApiResult::Error(err) => Err(err),
-        }
+        self.0
     }
 }
 
