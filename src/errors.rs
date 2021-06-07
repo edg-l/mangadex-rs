@@ -2,8 +2,6 @@ use serde::Deserialize;
 use thiserror::Error;
 use uuid::Uuid;
 
-use crate::auth::AuthTokens;
-
 /// A enum with all the possible errors.
 #[derive(Debug, Error)]
 pub enum Errors {
@@ -29,8 +27,6 @@ pub struct ApiErrors {
     /// A list of errors.
     #[serde(default)]
     pub errors: Vec<ApiError>,
-    pub token: Option<AuthTokens>,
-    pub message: Option<String>,
 }
 
 #[derive(Debug, Error, PartialEq, Eq, Deserialize)]

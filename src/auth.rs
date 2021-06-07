@@ -421,53 +421,6 @@ mod tests {
         Ok(())
     }
 
-    #[tokio::test]
-    async fn refresh_token_400() -> anyhow::Result<()> {
-        let server = MockServer::start_async().await;
-
-        let mock = server
-            .mock_async(|when, then| {
-                when.method(POST)
-                    .path("/auth/refresh")
-                    .header("Content-Type", "application/json")
-                    .header("Authorization", "Bearer sessiontoken");
-                then.status(400)
-                    .header("Content-Type", "application/json")
-                    .json_body(json!({
-                        "result": "error",
-                        "errors": [{
-                            "id": "5e50fc7b-e185-45b1-a692-58e8091b22d2",
-                            "title": "Error title",
-                            "status": 400,
-                            "detail": "Error detail",
-                        }],
-                    }));
-            })
-            .await;
-
-        let mut client = Client::new(&server.base_url())?;
-
-        client.set_tokens(Some(AuthTokens {
-            session: "sessiontoken".to_string(),
-            refresh: "refreshtoken".to_string(),
-        }));
-
-        assert_eq!(client.get_tokens().is_some(), true);
-
-        let errors = client.refresh_token().await.expect_err("expected error");
-
-        mock.assert_async().await;
-        assert_matches!(errors, Errors::HttpWithBody(errs) if errs.errors.len() == 1usize => {
-            let error = errs.errors.get(0).unwrap();
-            assert_eq!(error.id, uuid::Uuid::parse_str("5e50fc7b-e185-45b1-a692-58e8091b22d2")?);
-            assert_eq!(error.title.as_ref().unwrap().as_str(), "Error title");
-            assert_eq!(error.detail.as_ref().unwrap().as_str(), "Error detail");
-            assert_eq!(error.status, 400);
-        });
-
-        Ok(())
-    }
-
     macro_rules! impl_refresh_token_err {
         ($fn_name:ident, $code:literal) => {
             #[tokio::test]
@@ -484,11 +437,12 @@ mod tests {
                             .header("Content-Type", "application/json")
                             .json_body(json!({
                                 "result": "error",
-                                "token": {
-                                    "session": "sessiontoken",
-                                    "refresh": "refreshtoken",
-                                },
-                                "message": "Some message",
+                                "errors": [{
+                                    "id": "5e50fc7b-e185-45b1-a692-58e8091b22d2",
+                                    "title": "Error title",
+                                    "status": $code,
+                                    "detail": "Error detail",
+                                }],
                             }));
                     })
                     .await;
@@ -499,17 +453,17 @@ mod tests {
                     session: "sessiontoken".to_string(),
                     refresh: "refreshtoken".to_string(),
                 }));
-
                 assert_eq!(client.get_tokens().is_some(), true);
 
                 let errors = client.refresh_token().await.expect_err("expected error");
-
                 mock.assert_async().await;
-                assert_matches!(errors, Errors::HttpWithBody(errs) if errs.errors.len() == 0usize => {
-                    assert_eq!(errs.message.unwrap().as_str(), "Some message");
-                    let tokens = errs.token.unwrap();
-                    assert_eq!(tokens.session, "sessiontoken");
-                    assert_eq!(tokens.refresh, "refreshtoken");
+
+                assert_matches!(errors, Errors::HttpWithBody(errs) if errs.errors.len() == 1usize => {
+                    let error = errs.errors.get(0).unwrap();
+                    assert_eq!(error.id, uuid::Uuid::parse_str("5e50fc7b-e185-45b1-a692-58e8091b22d2")?);
+                    assert_eq!(error.title.as_ref().unwrap().as_str(), "Error title");
+                    assert_eq!(error.detail.as_ref().unwrap().as_str(), "Error detail");
+                    assert_eq!(error.status, $code);
                 });
 
                 Ok(())
@@ -517,6 +471,8 @@ mod tests {
 
         };
     }
+
+    impl_refresh_token_err!(refresh_token_400, 400);
 
     impl_refresh_token_err!(refresh_token_401, 401);
     impl_refresh_token_err!(refresh_token_403, 403);
