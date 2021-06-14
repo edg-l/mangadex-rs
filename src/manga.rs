@@ -182,7 +182,6 @@ pub struct MangaAttributes {
     // TODO: Known issue: empty descriptions return [] instead of {}
     #[serde(skip)]
     pub description: LocalizedString,
-    pub is_locked: bool,
     #[serde(deserialize_with = "deserialize_null_default")]
     pub links: Links,
     pub original_language: String,
