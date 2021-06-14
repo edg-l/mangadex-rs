@@ -1,7 +1,15 @@
+use std::borrow::Cow;
+
 use derive_builder::Builder;
 use isolanguage_1::LanguageCode;
-use serde::{Deserialize, Deserializer, Serialize};
+use reqwest::Method;
+use serde::{de::DeserializeOwned, Deserialize, Deserializer, Serialize};
 use uuid::Uuid;
+
+use crate::{
+    errors::{ApiErrors, Errors},
+    ApiResult, Result,
+};
 
 pub type LocalizedString = std::collections::HashMap<LanguageCode, String>;
 
@@ -86,4 +94,81 @@ where
 {
     let opt = Option::deserialize(deserializer)?;
     Ok(opt.unwrap_or_default())
+}
+
+pub trait FromResponse: Sized {
+    type Response: Into<Self>;
+}
+
+impl<T> From<Results<ApiResult<T, ApiErrors>>> for Results<Result<T, Errors>> {
+    fn from(value: Results<ApiResult<T, ApiErrors>>) -> Self {
+        Results {
+            results: value
+                .results
+                .into_iter()
+                .map(|r| r.into_result().map_err(|e| e.into()))
+                .collect(),
+            offset: value.offset,
+            limit: value.limit,
+            total: value.total,
+        }
+    }
+}
+
+impl<T: DeserializeOwned> FromResponse for Results<Result<T, Errors>> {
+    type Response = Results<ApiResult<T, ApiErrors>>;
+}
+
+pub trait Endpoint {
+    type Response: FromResponse;
+    type Query: Serialize;
+    type Body: Serialize;
+
+    fn path(&self) -> Cow<str>;
+
+    fn method(&self) -> Method {
+        Method::GET
+    }
+
+    fn require_auth(&self) -> bool {
+        false
+    }
+
+    fn query(&self) -> Option<&Self::Query> {
+        None
+    }
+
+    fn body(&self) -> Option<&Self::Body> {
+        None
+    }
+}
+
+impl crate::Client {
+    pub async fn endpoint<E>(&self, endpoint: &E) -> Result<E::Response>
+    where
+        E: Endpoint,
+        <<E as Endpoint>::Response as FromResponse>::Response: DeserializeOwned,
+    {
+        let mut endpoint_url = self.base_url.join(&endpoint.path())?;
+        if let Some(query) = endpoint.query() {
+            endpoint_url = endpoint_url.query_qs(query);
+        }
+
+        let mut res = self.http.request(endpoint.method(), endpoint_url);
+        if let Some(body) = endpoint.body() {
+            res = res.json(body);
+        }
+
+        if endpoint.require_auth() {
+            let tokens = self.require_tokens()?;
+            res = res.bearer_auth(&tokens.session);
+        }
+
+        Ok(res
+            .send()
+            .await?
+            .json::<<E::Response as FromResponse>::Response>()
+            .await?
+            .into())
+    }
 }

@@ -48,7 +48,7 @@ enum ApiResultDef<T, E> {
 
 #[derive(Deserialize)]
 #[serde(bound = "T: DeserializeOwned, E: DeserializeOwned")]
-struct ApiResult<T, E = ApiErrors>(#[serde(with = "ApiResultDef")] std::result::Result<T, E>);
+pub struct ApiResult<T, E = ApiErrors>(#[serde(with = "ApiResultDef")] std::result::Result<T, E>);
 
 impl<T, E> ApiResult<T, E> {
     fn into_result(self) -> Result<T, E> {

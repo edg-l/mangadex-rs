@@ -1,13 +1,13 @@
 use crate::{
     common::{deserialize_null_default, ApiObject, LocalizedString, Results},
     errors::Result,
-    ApiData, Client, NoData, PaginationQuery, UrlSerdeQS,
+    ApiData, Client, Endpoint, NoData, PaginationQuery, UrlSerdeQS,
 };
 use chrono::{DateTime, Utc};
 use derive_builder::Builder;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
-use std::collections::HashMap;
+use std::{borrow::Cow, collections::HashMap};
 use uuid::Uuid;
 
 /// The tag mode.
@@ -290,10 +290,7 @@ pub type ChapterList = Results<ChapterResponse>;
 impl Client {
     /// List mangas.
     pub async fn list_manga(&self, query: &MangaQuery) -> Result<MangaList> {
-        let endpoint = self.base_url.join("/manga")?.query_qs(query);
-        let res = self.http.get(endpoint).send().await?;
-
-        Self::json_api_results(res).await
+        self.endpoint(query).await
     }
 
     /// Create a manga.
@@ -658,5 +655,20 @@ mod tests {
             let tag = &result.as_ref().unwrap().data;
             assert_eq!(tag.r#type, ResourceType::Tag);
         }
+    }
+}
+
+// Example implementation
+impl Endpoint for MangaQuery {
+    type Query = MangaQuery;
+    type Body = ();
+    type Response = MangaList;
+
+    fn path(&self) -> Cow<'static, str> {
+        Cow::Borrowed("/manga")
+    }
+
+    fn query(&self) -> Option<&Self::Query> {
+        Some(&self)
     }
 }
