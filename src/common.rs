@@ -101,11 +101,23 @@ where
 }
 
 pub trait FromResponse: Sized {
-    type Response: Into<Self>;
+    type Response;
+
+    fn from_response(res: Self::Response) -> Self;
 }
 
-impl<T> From<Results<ApiResult<T, ApiErrors>>> for Results<Result<T, Errors>> {
-    fn from(value: Results<ApiResult<T, ApiErrors>>) -> Self {
+impl<T> FromResponse for Result<T, Errors> {
+    type Response = ApiResult<T, ApiErrors>;
+
+    fn from_response(value: Self::Response) -> Self {
+        value.into_result().map_err(|e| e.into())
+    }
+}
+
+impl<T> FromResponse for Results<Result<T, Errors>> {
+    type Response = Results<ApiResult<T, ApiErrors>>;
+
+    fn from_response(value: Self::Response) -> Self {
         Results {
             results: value
                 .results
@@ -119,8 +131,15 @@ impl<T> From<Results<ApiResult<T, ApiErrors>>> for Results<Result<T, Errors>> {
     }
 }
 
-impl<T: DeserializeOwned> FromResponse for Results<Result<T, Errors>> {
-    type Response = Results<ApiResult<T, ApiErrors>>;
+impl<T> FromResponse for Vec<Result<T, Errors>> {
+    type Response = Vec<ApiResult<T, ApiErrors>>;
+
+    fn from_response(value: Self::Response) -> Self {
+        value
+            .into_iter()
+            .map(|r| r.into_result().map_err(|e| e.into()))
+            .collect()
+    }
 }
 
 pub trait Endpoint {
@@ -168,11 +187,12 @@ impl crate::Client {
             res = res.bearer_auth(&tokens.session);
         }
 
-        Ok(res
+        let res = res
             .send()
             .await?
             .json::<<E::Response as FromResponse>::Response>()
-            .await?
-            .into())
+            .await?;
+
+        Ok(FromResponse::from_response(res))
     }
 }
