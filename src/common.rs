@@ -1,6 +1,5 @@
 use std::borrow::Cow;
 
-use derive_builder::Builder;
 use isolanguage_1::LanguageCode;
 use reqwest::Method;
 use serde::{de::DeserializeOwned, Deserialize, Deserializer, Serialize};
@@ -46,11 +45,16 @@ pub struct Results<T> {
     pub total: i32,
 }
 
-#[derive(Debug, Builder, Default, Serialize, Deserialize, Clone, Hash, PartialEq, Eq)]
-#[builder(setter(into, strip_option), default)]
+#[derive(Debug, Default, Serialize, Deserialize, Clone, Hash, PartialEq, Eq)]
 pub struct PaginationQuery {
     pub limit: Option<i32>,
     pub offset: Option<i32>,
+}
+
+impl PaginationQuery {
+    pub fn new(limit: Option<i32>, offset: Option<i32>) -> Self {
+        Self { limit, offset }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, Hash, PartialEq, Eq)]
