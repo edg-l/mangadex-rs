@@ -1,10 +1,11 @@
+#[macro_use]
+pub mod common;
 pub mod account;
 pub mod athome;
 pub mod auth;
 pub mod author;
 pub mod captcha;
 pub mod chapter;
-pub mod common;
 pub mod errors;
 pub mod group;
 pub mod infrastructure;
@@ -112,6 +113,37 @@ impl Client {
             .into_iter()
             .map(|r| r.into_result().map_err(|e| e.into()))
             .collect())
+    }
+}
+
+impl Client {
+    pub async fn send_request<E>(&self, endpoint: &E) -> Result<E::Response>
+    where
+        E: Endpoint,
+        <<E as Endpoint>::Response as FromResponse>::Response: DeserializeOwned,
+    {
+        let mut endpoint_url = self.base_url.join(&endpoint.path())?;
+        if let Some(query) = endpoint.query() {
+            endpoint_url = endpoint_url.query_qs(query);
+        }
+
+        let mut res = self.http.request(endpoint.method(), endpoint_url);
+        if let Some(body) = endpoint.body() {
+            res = res.json(body);
+        }
+
+        if endpoint.require_auth() {
+            let tokens = self.require_tokens()?;
+            res = res.bearer_auth(&tokens.session);
+        }
+
+        let res = res
+            .send()
+            .await?
+            .json::<<E::Response as FromResponse>::Response>()
+            .await?;
+
+        Ok(FromResponse::from_response(res))
     }
 }
 

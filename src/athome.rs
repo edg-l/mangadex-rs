@@ -1,30 +1,38 @@
-use crate::{Client, Result};
+use crate::{Client, FromResponse, Result};
 use reqwest::Url;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
-struct AtHomeServer {
-    base_url: String,
+pub struct AtHomeServerRes {
+    pub base_url: String,
 }
 
-impl Client {
-    pub async fn at_home(&self, chapter_id: &Uuid, force_port443: bool) -> Result<Url> {
-        let mut endpoint = self
-            .base_url
-            .join("/at-home/server/")?
-            .join(&format!("{:x}", chapter_id))?;
+impl FromResponse for AtHomeServerRes {
+    type Response = Self;
 
-        if force_port443 {
-            endpoint
-                .query_pairs_mut()
-                .append_pair("forcePort443", "true");
-        }
+    fn from_response(res: Self::Response) -> Self {
+        res
+    }
+}
 
-        let res = self.http.get(endpoint).send().await?;
-        let res = res.json::<AtHomeServer>().await?;
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct AtHomeServerReq<'a> {
+    #[serde(skip)]
+    chapter_id: &'a Uuid,
+    force_port443: bool,
+}
 
+impl_endpoint! {
+    GET ("/at-home/server/{:x}", chapter_id),
+    #[query] AtHomeServerReq<'_>, AtHomeServerRes:no_send
+}
+
+impl AtHomeServerReq<'_> {
+    pub async fn send(&self, client: &Client) -> Result<Url> {
+        let res = client.send_request(self).await?;
         Ok(Url::parse(&res.base_url)?)
     }
 }
@@ -37,17 +45,27 @@ mod tests {
     #[tokio::test]
     async fn at_home() {
         let client = Client::default();
-        let chapter_uuid = uuid::Uuid::parse_str("0e94efb5-6cb5-49fd-b522-51b4460c9821").unwrap();
-
-        client.at_home(&chapter_uuid, false).await.unwrap();
+        let chapter_id = &uuid::Uuid::parse_str("0e94efb5-6cb5-49fd-b522-51b4460c9821").unwrap();
+        AtHomeServerReq {
+            chapter_id,
+            force_port443: false,
+        }
+        .send(&client)
+        .await
+        .expect("Failed to resolve at-home request");
     }
 
     #[tokio::test]
     async fn at_home_force443() {
         let client = Client::default();
-        let chapter_uuid = uuid::Uuid::parse_str("0e94efb5-6cb5-49fd-b522-51b4460c9821").unwrap();
-
-        let url = client.at_home(&chapter_uuid, true).await.unwrap();
-        assert_eq!(url.port_or_known_default(), Some(443));
+        let chapter_id = &uuid::Uuid::parse_str("0e94efb5-6cb5-49fd-b522-51b4460c9821").unwrap();
+        let res = AtHomeServerReq {
+            chapter_id,
+            force_port443: false,
+        }
+        .send(&client)
+        .await
+        .expect("Failed to resolve at-home request");
+        assert_eq!(res.port_or_known_default(), Some(443));
     }
 }

@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use isolanguage_1::LanguageCode;
 use reqwest::Method;
-use serde::{de::DeserializeOwned, Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use uuid::Uuid;
 
 use crate::{
@@ -143,9 +143,9 @@ impl<T> FromResponse for Vec<Result<T, Errors>> {
 }
 
 pub trait Endpoint {
-    type Response: FromResponse;
     type Query: Serialize;
     type Body: Serialize;
+    type Response: FromResponse;
 
     fn path(&self) -> Cow<str>;
 
@@ -166,33 +166,85 @@ pub trait Endpoint {
     }
 }
 
-impl crate::Client {
-    pub async fn endpoint<E>(&self, endpoint: &E) -> Result<E::Response>
-    where
-        E: Endpoint,
-        <<E as Endpoint>::Response as FromResponse>::Response: DeserializeOwned,
-    {
-        let mut endpoint_url = self.base_url.join(&endpoint.path())?;
-        if let Some(query) = endpoint.query() {
-            endpoint_url = endpoint_url.query_qs(query);
+// Helper macro to quickly implement endpoint for carious structs
+macro_rules! impl_endpoint {
+    { $method:ident $path:tt, #[$payload:ident $($auth:ident)?] $typ:ty, $out:ty $(:$out_res:ident)? } => {
+        impl $crate::common::Endpoint for $typ {
+            type Response = $out;
+
+            fn method(&self) -> reqwest::Method {
+                reqwest::Method::$method
+            }
+
+            impl_endpoint! { @path $path }
+            impl_endpoint! { @payload $payload }
+            $(impl_endpoint! { @$auth })?
         }
 
-        let mut res = self.http.request(endpoint.method(), endpoint_url);
-        if let Some(body) = endpoint.body() {
-            res = res.json(body);
+        impl_endpoint! { @send $(:$out_res)?, $typ, $out }
+    };
+    { @path ($path:expr, $($arg:ident),+) } => {
+        fn path(&self) -> std::borrow::Cow<str> {
+            std::borrow::Cow::Owned(format!($path, $(self.$arg),+))
         }
-
-        if endpoint.require_auth() {
-            let tokens = self.require_tokens()?;
-            res = res.bearer_auth(&tokens.session);
+    };
+    { @path $path:expr } => {
+        fn path(&self) -> std::borrow::Cow<str> {
+            std::borrow::Cow::Borrowed($path)
         }
-
-        let res = res
-            .send()
-            .await?
-            .json::<<E::Response as FromResponse>::Response>()
-            .await?;
-
-        Ok(FromResponse::from_response(res))
-    }
+    };
+    { @payload query } => {
+        type Query = Self;
+        type Body = ();
+        fn query(&self) -> Option<&Self::Query> {
+            Some(&self)
+        }
+    };
+    { @payload body } => {
+        type Query = ();
+        type Body = Self;
+        fn body(&self) -> Option<&Self::Body> {
+            Some(&self)
+        }
+    };
+    { @payload no_data } => {
+        type Query = ();
+        type Body = ();
+    };
+    { @auth } => {
+        fn require_auth(&self) -> bool {
+            true
+        }
+    };
+    { @send, $typ:ty, $out:ty } => {
+        impl $typ {
+            pub async fn send(&self, client: &$crate::Client) -> Result<$out> {
+                client.send_request(self).await
+            }
+        }
+    };
+    { @send:result, $typ:ty, $out:ty } => {
+        impl $typ {
+            pub async fn send(&self, client: &$crate::Client) -> $out {
+                client.send_request(self).await?
+            }
+        }
+    };
+    { @send:no_send, $typ:ty, $out:ty } => { };
+    { @send:discard, $typ:ty, $out:ty } => {
+        impl $typ {
+            pub async fn send(&self, client: &$crate::Client) -> Result<()> {
+                client.send_request(self).await?;
+                Ok(())
+            }
+        }
+    };
+    { @send:discard_result, $typ:ty, $out:ty } => {
+        impl $typ {
+            pub async fn send(&self, client: &$crate::Client) -> Result<()> {
+                client.send_request(self).await??;
+                Ok(())
+            }
+        }
+    };
 }
