@@ -218,7 +218,7 @@ macro_rules! impl_endpoint {
     };
     { @send, $typ:ty, $out:ty } => {
         impl $typ {
-            pub async fn send(&self, client: &$crate::Client) -> Result<$out> {
+            pub async fn send(&self, client: &$crate::Client) -> $crate::Result<$out> {
                 client.send_request(self).await
             }
         }
@@ -233,7 +233,7 @@ macro_rules! impl_endpoint {
     { @send:no_send, $typ:ty, $out:ty } => { };
     { @send:discard, $typ:ty, $out:ty } => {
         impl $typ {
-            pub async fn send(&self, client: &$crate::Client) -> Result<()> {
+            pub async fn send(&self, client: &$crate::Client) -> $crate::Result<()> {
                 client.send_request(self).await?;
                 Ok(())
             }
@@ -241,7 +241,7 @@ macro_rules! impl_endpoint {
     };
     { @send:discard_result, $typ:ty, $out:ty } => {
         impl $typ {
-            pub async fn send(&self, client: &$crate::Client) -> Result<()> {
+            pub async fn send(&self, client: &$crate::Client) -> $crate::Result<()> {
                 client.send_request(self).await??;
                 Ok(())
             }
