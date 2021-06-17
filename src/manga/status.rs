@@ -1,63 +1,45 @@
-use std::borrow::Cow;
+use std::collections::HashMap;
 
-use reqwest::Method;
 use serde::Serialize;
 use uuid::Uuid;
 
 use super::{MangaReadingStatus, MangaReadingStatusBody, MangaReadingStatuses};
-use crate::{ApiData, Endpoint, NoData, Result};
+use crate::{ApiData, Client, NoData, Result};
 
 /// Get manga reading status (requires authentication)
 ///
 /// Call to `GET /manga/{id}/status`
+#[derive(Debug, Clone)]
 pub struct GetMangaStatus<'a> {
     pub id: &'a Uuid,
 }
 
-impl Endpoint for GetMangaStatus<'_> {
-    type Query = ();
-    type Body = ();
-    type Response = Result<MangaReadingStatusBody>;
+impl_endpoint! {
+    GET ("/manga/{:x}/status", id),
+    #[no_data auth] GetMangaStatus<'_>,
+    #[no_send] Result<MangaReadingStatusBody>
+}
 
-    fn path(&self) -> Cow<str> {
-        Cow::Owned(format!("/manga/{:x}/status", self.id))
-    }
-
-    fn require_auth(&self) -> bool {
-        true
+impl GetMangaStatus<'_> {
+    pub async fn send(&self, client: &Client) -> Result<MangaReadingStatus> {
+        client.send_request(self).await?.map(|r| r.status)
     }
 }
 
 /// Update manga reading status (requires authentication)
 ///
 /// Call to `POST /manga/{id}/status`
-#[derive(Serialize)]
+#[derive(Debug, Serialize, Clone)]
 pub struct UpdateMangaStatus<'a> {
     #[serde(skip)]
     pub id: &'a Uuid,
     pub status: MangaReadingStatus,
 }
 
-impl Endpoint for UpdateMangaStatus<'_> {
-    type Query = ();
-    type Body = Self;
-    type Response = Result<NoData>;
-
-    fn path(&self) -> Cow<str> {
-        Cow::Owned(format!("/manga/{:x}/status", self.id))
-    }
-
-    fn method(&self) -> Method {
-        Method::POST
-    }
-
-    fn require_auth(&self) -> bool {
-        true
-    }
-
-    fn body(&self) -> Option<&Self::Body> {
-        Some(&self)
-    }
+impl_endpoint! {
+    POST ("/manga/{:x}/status", id),
+    #[body auth] UpdateMangaStatus<'_>,
+    #[discard_result] Result<NoData>
 }
 
 /// Get all manga reading status for logged user (requires authentication)
@@ -68,17 +50,15 @@ pub struct AllMangaStatus {
     pub status: Option<MangaReadingStatus>,
 }
 
-impl Endpoint for AllMangaStatus {
-    type Query = Self;
-    type Body = ();
-    type Response = Result<MangaReadingStatuses>;
+impl_endpoint! {
+    GET "/manga/status",
+    #[query auth] AllMangaStatus,
+    #[no_send] Result<MangaReadingStatuses>
+}
 
-    fn path(&self) -> Cow<str> {
-        Cow::Borrowed("/manga/status")
-    }
-
-    fn require_auth(&self) -> bool {
-        true
+impl AllMangaStatus {
+    pub async fn send(&self, client: &Client) -> Result<HashMap<Uuid, MangaReadingStatus>> {
+        client.send_request(self).await?.map(|r| r.statuses)
     }
 }
 
@@ -93,20 +73,8 @@ pub struct MangaReadMarkers<'a> {
     // pub grouped: Option<bool>,
 }
 
-impl Endpoint for MangaReadMarkers<'_> {
-    type Query = Self;
-    type Body = ();
-    type Response = Result<ApiData<Vec<Uuid>>>;
-
-    fn path(&self) -> Cow<str> {
-        Cow::Borrowed("/manga/read")
-    }
-
-    fn require_auth(&self) -> bool {
-        true
-    }
-
-    fn query(&self) -> Option<&Self::Query> {
-        Some(&self)
-    }
+impl_endpoint! {
+    GET "/manga/read",
+    #[query auth] MangaReadMarkers<'_>,
+    #[flatten_result] Result<ApiData<Vec<Uuid>>>
 }

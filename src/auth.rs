@@ -12,16 +12,9 @@ pub struct AuthTokens {
     pub refresh: String,
 }
 
-#[derive(Deserialize)]
-struct LoginResponse {
+#[derive(Debug, Deserialize, Clone)]
+pub struct LoginResponse {
     pub token: AuthTokens,
-}
-
-/// Request payload to login.
-#[derive(Serialize, Deserialize)]
-struct LoginRequest {
-    username: String,
-    password: String,
 }
 
 /// Response when checking a token.
@@ -33,18 +26,52 @@ pub struct CheckTokenResponse {
     pub permissions: Vec<String>,
 }
 
-/// Request payload to refresh the session token.
-#[derive(Debug, Serialize, Deserialize, Clone)]
-struct RefreshTokenRequest {
-    /// This token must be the refresh token.
-    pub token: String,
-}
-
 /// The response when refreshing the session token.
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct RefreshTokenResponse {
     pub token: AuthTokens,
     pub message: Option<String>,
+}
+
+#[derive(Debug, Serialize, Clone)]
+pub struct LoginReq<'a> {
+    username: &'a str,
+    password: &'a str,
+}
+
+impl_endpoint! {
+    POST "/auth/login",
+    #[body] LoginReq<'_>,
+    #[flatten_result] Result<LoginResponse>
+}
+
+#[derive(Debug, Clone)]
+pub struct CheckTokenReq;
+
+impl_endpoint! {
+    GET "/auth/check",
+    #[no_data auth] CheckTokenReq,
+    #[flatten_result] Result<CheckTokenResponse>
+}
+
+#[derive(Debug, Clone)]
+pub struct LogoutReq;
+
+impl_endpoint! {
+    POST "/auth/logout",
+    #[no_data auth] LogoutReq,
+    #[discard_result] Result<NoData>
+}
+
+#[derive(Debug, Serialize, Clone)]
+pub struct RefreshTokenReq<'a> {
+    pub token: &'a str,
+}
+
+impl_endpoint! {
+    POST "/auth/refresh",
+    #[body] RefreshTokenReq<'_>,
+    #[flatten_result] Result<RefreshTokenResponse>
 }
 
 impl Client {
@@ -53,16 +80,9 @@ impl Client {
     /// * `username` - Should be between [1, 64] characters.
     /// * `password` - Should be between [8, 1024] characters.
     pub async fn login(&mut self, username: &str, password: &str) -> Result<&AuthTokens> {
-        let endpoint = self.base_url.join("/auth/login")?;
-        let request = LoginRequest {
-            username: username.to_string(),
-            password: password.to_string(),
-        };
+        let tokens = LoginReq { username, password }.send(self).await?.token;
 
-        let res = self.http.post(endpoint).json(&request).send().await?;
-        let res = Self::json_api_result::<LoginResponse>(res).await?;
-
-        self.set_tokens(Some(res.token));
+        self.set_tokens(Some(tokens));
         Ok(self.get_tokens().unwrap())
     }
 
@@ -81,34 +101,10 @@ impl Client {
         self.tokens.as_ref().ok_or(Errors::MissingTokens)
     }
 
-    /// Check token endpoint
-    pub async fn check_token(&self) -> Result<CheckTokenResponse> {
-        let tokens = self.require_tokens()?;
-        let endpoint = self.base_url.join("/auth/check")?;
-
-        let res = self
-            .http
-            .get(endpoint)
-            .bearer_auth(&tokens.session)
-            .send()
-            .await?;
-
-        Self::json_api_result(res).await
-    }
-
     /// Logout endpoint
     pub async fn logout(&mut self) -> Result<()> {
-        let tokens = self.require_tokens()?;
-        let endpoint = self.base_url.join("/auth/logout")?;
+        LogoutReq.send(self).await?;
 
-        let res = self
-            .http
-            .post(endpoint)
-            .bearer_auth(&tokens.session)
-            .send()
-            .await?;
-
-        Self::json_api_result::<NoData>(res).await?;
         self.set_tokens(None);
         Ok(())
     }
@@ -116,21 +112,12 @@ impl Client {
     /// Refresh token endpoint
     pub async fn refresh_token(&mut self) -> Result<RefreshTokenResponse> {
         let tokens = self.require_tokens()?;
-        let endpoint = self.base_url.join("/auth/refresh")?;
+        let res = RefreshTokenReq {
+            token: &tokens.refresh,
+        }
+        .send(self)
+        .await?;
 
-        let request = RefreshTokenRequest {
-            token: tokens.refresh.to_string(),
-        };
-
-        let res = self
-            .http
-            .post(endpoint)
-            .bearer_auth(&tokens.session)
-            .json(&request)
-            .send()
-            .await?;
-
-        let res = Self::json_api_result::<RefreshTokenResponse>(res).await?;
         self.set_tokens(Some(res.token.clone()));
         Ok(res)
     }
@@ -284,7 +271,7 @@ mod tests {
 
         assert_eq!(client.get_tokens().is_some(), true);
 
-        let info = client.check_token().await?;
+        let info = CheckTokenReq.send(&client).await?;
 
         mock.assert_async().await;
         assert_eq!(info.is_authenticated, true);
@@ -383,8 +370,7 @@ mod tests {
             .mock_async(|when, then| {
                 when.method(POST)
                     .path("/auth/refresh")
-                    .header("Content-Type", "application/json")
-                    .header("Authorization", "Bearer sessiontoken");
+                    .header("Content-Type", "application/json");
                 then.status(200)
                     .header("Content-Type", "application/json")
                     .json_body(json!({
@@ -432,7 +418,7 @@ mod tests {
                         when.method(POST)
                             .path("/auth/refresh")
                             .header("Content-Type", "application/json")
-                            .header("Authorization", "Bearer sessiontoken");
+                            ;// .header("Authorization", "Bearer sessiontoken");
                         then.status($code)
                             .header("Content-Type", "application/json")
                             .json_body(json!({

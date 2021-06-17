@@ -16,7 +16,8 @@ pub struct FollowedMangaFeed<'a> {
 
 impl_endpoint! {
     GET "/user/follows/manga/feed",
-    #[body auth] FollowedMangaFeed<'_>, ChapterList
+    #[body auth] FollowedMangaFeed<'_>,
+    ChapterList
 }
 
 /// Manga feed
@@ -34,5 +35,6 @@ pub struct MangaFeed<'a> {
 
 impl_endpoint! {
     GET ("/manga/{:x}/feed", manga_id),
-    #[query] MangaFeed<'_>, ChapterList
+    #[query] MangaFeed<'_>,
+    ChapterList
 }

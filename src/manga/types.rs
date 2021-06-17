@@ -270,7 +270,7 @@ pub struct MangaReadingStatuses {
     pub statuses: HashMap<Uuid, MangaReadingStatus>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "snake_case")]
 pub enum MangaReadingStatus {
     Reading,

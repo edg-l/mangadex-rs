@@ -1,6 +1,7 @@
 use crate::{errors::Errors, Client, Result};
 
 impl Client {
+    // Apparently `GET /ping` does not return JSON, because it's a special snow-flake.
     pub async fn ping(&self) -> Result<()> {
         let endpoint = self.base_url.join("/ping")?;
 

@@ -13,25 +13,11 @@ pub enum MappingType {
     Tag,
 }
 
-#[derive(Debug, Builder, Serialize, Clone, Hash, PartialEq, Eq)]
-#[builder(setter(into))]
-#[serde(rename_all = "camelCase")]
-pub struct MappingQuery {
-    #[builder(setter(name = "query_type"))]
-    pub r#type: MappingType,
-
-    #[builder(setter(each = "add_id"))]
-    pub ids: Vec<u32>,
-}
-
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Hash, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum MappingIdType {
     MappingId,
 }
-
-pub type MappingId = ApiObject<MappingIdAttributes, MappingIdType>;
-pub type MappingIdResponse = Result<ApiData<MappingId>>;
 
 #[derive(Debug, Deserialize, Clone, Hash, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -41,13 +27,24 @@ pub struct MappingIdAttributes {
     pub new_id: Uuid,
 }
 
-impl Client {
-    pub async fn legacy_mapping(&self, query: &MappingQuery) -> Result<Vec<MappingIdResponse>> {
-        let endpoint = self.base_url.join("/legacy/mapping")?;
-        let res = self.http.post(endpoint).json(query).send().await?;
+pub type MappingId = ApiObject<MappingIdAttributes, MappingIdType>;
+pub type MappingIdResponse = Result<ApiData<MappingId>>;
 
-        Self::json_api_result_vec(res).await
-    }
+#[derive(Debug, Builder, Serialize, Clone, Hash, PartialEq, Eq)]
+#[builder(setter(into))]
+#[serde(rename_all = "camelCase")]
+pub struct LegacyMappingReq {
+    #[builder(setter(name = "query_type"))]
+    pub r#type: MappingType,
+
+    #[builder(setter(each = "add_id"))]
+    pub ids: Vec<u32>,
+}
+
+impl_endpoint! {
+    POST "/legacy/mapping",
+    #[body] LegacyMappingReq,
+    Vec<MappingIdResponse>
 }
 
 #[cfg(test)]
@@ -88,13 +85,13 @@ mod tests {
             .await;
 
         let client = Client::new(&server.base_url()).unwrap();
-        let mappings = client
-            .legacy_mapping(&MappingQuery {
-                r#type: MappingType::Manga,
-                ids: vec![1],
-            })
-            .await
-            .expect("Failed to parse");
+        let mappings = LegacyMappingReq {
+            r#type: MappingType::Manga,
+            ids: vec![1],
+        }
+        .send(&client)
+        .await
+        .expect("Failed to parse");
 
         mock.assert_async().await;
         assert_eq!(mappings.len(), 1);

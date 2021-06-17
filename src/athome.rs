@@ -27,13 +27,14 @@ pub struct AtHomeServerReq<'a> {
 
 impl_endpoint! {
     GET ("/at-home/server/{:x}", chapter_id),
-    #[query] AtHomeServerReq<'_>, AtHomeServerRes:no_send
+    #[query] AtHomeServerReq<'_>,
+    #[no_send] AtHomeServerRes
 }
 
 impl AtHomeServerReq<'_> {
     pub async fn send(&self, client: &Client) -> Result<Url> {
-        let res = client.send_request(self).await?;
-        Ok(Url::parse(&res.base_url)?)
+        let r = client.send_request(self).await?;
+        Ok(Url::parse(&r.base_url)?)
     }
 }
 

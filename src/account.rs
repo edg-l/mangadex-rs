@@ -1,4 +1,4 @@
-use crate::{common::ApiObject, errors::Result, ApiData, Client, NoData};
+use crate::{common::ApiObject, errors::Result, ApiData, NoData};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -23,7 +23,8 @@ pub struct CreateAccountReq<'a> {
 
 impl_endpoint! {
     POST "/account/create",
-    #[body] CreateAccountReq<'_>, UserResponse:result
+    #[body] CreateAccountReq<'_>,
+    #[flatten_result] UserResponse
 }
 
 /// Activate account
@@ -36,7 +37,8 @@ pub struct ActivateAccountReq<'a> {
 
 impl_endpoint! {
     GET ("/account/activate/{}", code),
-    #[no_data] ActivateAccountReq<'_>, Result<NoData>:discard_result
+    #[no_data] ActivateAccountReq<'_>,
+    #[discard_result] Result<NoData>
 }
 
 /// Resend activation code
@@ -49,7 +51,8 @@ pub struct ResendActivationCodeReq<'a> {
 
 impl_endpoint! {
     POST "/account/activate/resend",
-    #[body] ResendActivationCodeReq<'_>, Result<NoData>:discard_result
+    #[body] ResendActivationCodeReq<'_>,
+    #[discard_result] Result<NoData>
 }
 
 /// Recover account
@@ -62,7 +65,8 @@ pub struct RecoverAccountReq<'a> {
 
 impl_endpoint! {
     POST "/account/recover",
-    #[body] RecoverAccountReq<'_>, Result<NoData>:discard_result
+    #[body] RecoverAccountReq<'_>,
+    #[discard_result] Result<NoData>
 }
 
 /// Complete account recover
@@ -78,5 +82,6 @@ pub struct CompleteAccountRecoverReq<'a> {
 
 impl_endpoint! {
     POST ("/account/recover/{}", code),
-    #[body] CompleteAccountRecoverReq<'_>, Result<NoData>:discard_result
+    #[body] CompleteAccountRecoverReq<'_>,
+    #[discard_result] Result<NoData>
 }

@@ -1,13 +1,12 @@
 use crate::{
     common::{ApiObject, Results},
     errors::Result,
-    ApiData, Client, NoData, OrderType, PaginationQuery, UrlSerdeQS,
+    ApiData, NoData, OrderType, PaginationQuery,
 };
 use chrono::{DateTime, Utc};
 use derive_builder::Builder;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
-use std::collections::HashMap;
 use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize, Clone, Hash, PartialEq, Eq)]
@@ -16,11 +15,26 @@ pub struct AuthorOrder {
     pub name: OrderType,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct AuthorAttributes {
+    pub name: String,
+    pub image_url: Option<String>,
+    // pub biography: HashMap<String, String>,
+    pub version: i32,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+pub type Author = ApiObject<AuthorAttributes>;
+pub type AuthorResponse = Result<ApiData<Author>>;
+pub type AuthorList = Results<AuthorResponse>;
+
 #[skip_serializing_none]
-#[derive(Debug, Builder, Default, Serialize, Deserialize, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Serialize, Clone, Builder, Default)]
 #[serde(rename_all = "camelCase")]
 #[builder(setter(into, strip_option), default)]
-pub struct AuthorQuery {
+pub struct ListAuthorsReq {
     #[serde(flatten)]
     pub pagination: PaginationQuery,
 
@@ -32,94 +46,68 @@ pub struct AuthorQuery {
     pub order: Option<AuthorOrder>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct AuthorAttributes {
-    pub name: String,
-    pub image_url: Option<String>,
-    pub biography: HashMap<String, String>,
-    pub version: i32,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
+impl_endpoint! {
+    GET "/author",
+    #[query] ListAuthorsReq,
+    AuthorList
 }
 
-pub type Author = ApiObject<AuthorAttributes>;
-pub type AuthorResponse = Result<ApiData<Author>>;
-pub type AuthorList = Results<AuthorResponse>;
+/// Create author (requires authentication)
+///
+/// Call to `POST /author`
+#[derive(Debug, Serialize, Clone)]
+pub struct CreateAuthorReq<'a> {
+    name: &'a str,
+    version: i32,
+}
 
-impl Client {
-    /// List authors.
-    pub async fn list_authors(&self, query: &AuthorQuery) -> Result<AuthorList> {
-        let endpoint = self.base_url.join("/author")?.query_qs(query);
-        let res = self.http.get(endpoint).send().await?;
+impl_endpoint! {
+    POST "/author",
+    #[body auth] CreateAuthorReq<'_>,
+    #[flatten_result] AuthorResponse
+}
 
-        Self::json_api_results(res).await
-    }
+/// Update author (requires authentication)
+///
+/// Call to `POST /author/{id}`
+#[derive(Debug, Serialize, Clone)]
+pub struct UpdateAuthorReq<'a> {
+    #[serde(skip)]
+    id: &'a Uuid,
+    name: &'a str,
+    version: i32,
+}
 
-    /// Create an author.
-    ///
-    /// Requires auth.
-    pub async fn create_author(&self, name: &str, version: i32) -> AuthorResponse {
-        let tokens = self.require_tokens()?;
-        let endpoint = self.base_url.join("/author")?;
-        let res = self
-            .http
-            .post(endpoint)
-            .bearer_auth(&tokens.session)
-            .json(&serde_json::json!({
-                "name": name,
-                "version": version
-            }))
-            .send()
-            .await?;
+impl_endpoint! {
+    PUT ("/author/{:x}", id),
+    #[body auth] UpdateAuthorReq<'_>,
+    #[flatten_result] AuthorResponse
+}
 
-        Self::json_api_result(res).await
-    }
+/// Get author
+///
+/// Call to `GET /author/{id}`
+#[derive(Debug, Clone)]
+pub struct GetAuthorReq<'a> {
+    id: &'a Uuid,
+}
 
-    /// Update an author.
-    ///
-    /// Requires auth.
-    pub async fn update_author(&self, id: &Uuid, name: &str, version: i32) -> AuthorResponse {
-        let tokens = self.require_tokens()?;
-        let endpoint = self.base_url.join(&format!("/author/{:x}", id))?;
-        let res = self
-            .http
-            .put(endpoint)
-            .bearer_auth(&tokens.session)
-            .json(&serde_json::json!({
-                "name": name,
-                "version": version
-            }))
-            .send()
-            .await?;
+impl_endpoint! {
+    GET ("/author/{:x}", id),
+    #[no_data] GetAuthorReq<'_>,
+    #[flatten_result] AuthorResponse
+}
 
-        Self::json_api_result(res).await
-    }
+/// Delete author (requires authentication)
+///
+/// Call to `DELETE /author/{id}`
+#[derive(Debug, Clone)]
+pub struct DeleteAuthorReq<'a> {
+    id: &'a Uuid,
+}
 
-    /// View a single author.
-    pub async fn view_author(&self, id: &Uuid) -> AuthorResponse {
-        let endpoint = self.base_url.join(&format!("/author/{:x}", id))?;
-        let res = self.http.get(endpoint).send().await?;
-
-        Self::json_api_result(res).await
-    }
-
-    /// Delete an author.
-    ///
-    /// Requires auth.
-    pub async fn delete_author(&self, id: &Uuid) -> Result<()> {
-        let tokens = self.require_tokens()?;
-
-        let endpoint = self.base_url.join(&format!("/author/{:x}", id))?;
-
-        let res = self
-            .http
-            .delete(endpoint)
-            .bearer_auth(&tokens.session)
-            .send()
-            .await?;
-
-        Self::json_api_result::<NoData>(res).await?;
-        Ok(())
-    }
+impl_endpoint! {
+    DELETE ("/author/{:x}", id),
+    #[no_data auth] DeleteAuthorReq<'_>,
+    #[discard_result] Result<NoData>
 }

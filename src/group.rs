@@ -33,7 +33,7 @@ pub type ScanlationGroupList = Results<ScanlationGroupResponse>;
 
 #[derive(Debug, Builder, Serialize, Deserialize, Default)]
 #[builder(setter(into, strip_option), default)]
-pub struct GroupListRequest {
+pub struct ListGroupReq {
     pub limit: Option<i32>,
 
     pub offset: Option<i32>,
@@ -44,7 +44,13 @@ pub struct GroupListRequest {
     pub name: Option<String>,
 }
 
-impl GroupListRequest {
+impl_endpoint! {
+    GET "/group",
+    #[query] ListGroupReq,
+    ScanlationGroupList
+}
+
+impl ListGroupReq {
     pub fn new(limit: i32, offset: i32, ids: Vec<Uuid>, name: &str) -> Self {
         Self {
             limit: Some(limit),
@@ -58,7 +64,7 @@ impl GroupListRequest {
 #[skip_serializing_none]
 #[derive(Debug, Builder, Serialize, Deserialize, Clone)]
 #[builder(setter(into, strip_option))]
-pub struct CreateGroupRequest {
+pub struct CreateGroupReq {
     pub name: String,
 
     #[builder(default)]
@@ -70,138 +76,83 @@ pub struct CreateGroupRequest {
     pub version: i32,
 }
 
-impl Client {
-    /// Search for scanlation groups.
-    pub async fn list_group(&self, request: &GroupListRequest) -> Result<ScanlationGroupList> {
-        let endpoint = self.base_url.join("/group")?.query_qs(request);
+impl_endpoint! {
+    POST "/group",
+    #[body auth] CreateGroupReq,
+    #[flatten_result] Result<ScanlationGroupData>
+}
 
-        let res = self.http.get(endpoint).send().await?;
+pub struct ViewGroupReq<'a> {
+    id: &'a Uuid,
+}
 
-        Self::json_api_results(res).await
-    }
+impl_endpoint! {
+    GET ("/group/{:x}", id),
+    #[no_data] ViewGroupReq<'_>,
+    #[flatten_result] Result<ScanlationGroupData>
+}
 
-    /// Create a group.
-    ///
-    /// Requires auth.
-    pub async fn create_group(&self, request: &CreateGroupRequest) -> Result<ScanlationGroupData> {
-        let tokens = self.require_tokens()?;
-        let endpoint = self.base_url.join("/group")?;
+#[skip_serializing_none]
+#[derive(Debug, Builder, Serialize, Deserialize, Clone)]
+#[builder(setter(into, strip_option))]
+pub struct UpdateGroupReq {
+    pub name: String,
 
-        let res = self
-            .http
-            .post(endpoint)
-            .bearer_auth(&tokens.session)
-            .json(&request)
-            .send()
-            .await?;
+    #[builder(default)]
+    pub leader: Option<Uuid>,
 
-        Self::json_api_result(res).await
-    }
+    #[builder(default)]
+    pub members: Option<Vec<Uuid>>,
 
-    /// View a group.
-    pub async fn view_group(&self, id: &Uuid) -> Result<ScanlationGroupData> {
-        let endpoint = self.base_url.join(&format!("/group/{:x}", id))?;
+    pub version: i32,
+}
 
-        let res = self.http.get(endpoint).send().await?;
+impl_endpoint! {
+    PUT "/group",
+    #[body auth] UpdateGroupReq,
+    #[flatten_result] Result<ScanlationGroupData>
+}
 
-        Self::json_api_result(res).await
-    }
+pub struct DeleteGroupReq<'a> {
+    id: &'a Uuid,
+}
 
-    /// Update a group.
-    ///
-    /// Requires auth.
-    pub async fn update_group(&self, request: &CreateGroupRequest) -> Result<ScanlationGroupData> {
-        let tokens = self.require_tokens()?;
+impl_endpoint! {
+    DELETE ("/group/{:x}", id),
+    #[no_data auth] DeleteGroupReq<'_>,
+    #[discard_result] Result<NoData>
+}
 
-        let endpoint = self.base_url.join("/group")?;
+pub struct FollowGroupReq<'a> {
+    id: &'a Uuid,
+}
 
-        let res = self
-            .http
-            .put(endpoint)
-            .bearer_auth(&tokens.session)
-            .json(&request)
-            .send()
-            .await?;
+impl_endpoint! {
+    POST ("/group/{:x}/follow", id),
+    #[no_data auth] FollowGroupReq<'_>,
+    #[discard_result] Result<NoData>
+}
 
-        Self::json_api_result(res).await
-    }
+pub struct UnfollowGroupReq<'a> {
+    id: &'a Uuid,
+}
 
-    /// Delete a group.
-    ///
-    /// Requires auth.
-    pub async fn delete_group(&self, id: &Uuid) -> Result<()> {
-        let tokens = self.require_tokens()?;
+impl_endpoint! {
+    DELETE ("/group/{:x}/follow", id),
+    #[no_data auth] UnfollowGroupReq<'_>,
+    #[discard_result] Result<NoData>
+}
 
-        let mut buffer = Uuid::encode_buffer();
-        let id_str = id.to_hyphenated_ref().encode_lower(&mut buffer);
-        let endpoint = self.base_url.join("/group/")?.join(id_str)?;
+#[derive(Debug, Serialize, Clone)]
+pub struct FollowedGroupsReq<'a> {
+    #[serde(flatten)]
+    pagination: &'a PaginationQuery,
+}
 
-        let res = self
-            .http
-            .delete(endpoint)
-            .bearer_auth(&tokens.session)
-            .send()
-            .await?;
-
-        Self::json_api_result::<NoData>(res).await?;
-        Ok(())
-    }
-
-    /// Follow a group.
-    ///
-    /// Requires auth.
-    pub async fn follow_group(&self, id: &Uuid) -> Result<()> {
-        let tokens = self.require_tokens()?;
-
-        let endpoint = self.base_url.join(&format!("/group/{:x}/follow", id))?;
-
-        let res = self
-            .http
-            .post(endpoint)
-            .bearer_auth(&tokens.session)
-            .send()
-            .await?;
-
-        Self::json_api_result::<NoData>(res).await?;
-        Ok(())
-    }
-
-    /// Unfollow a group.
-    ///
-    /// Requires auth.
-    pub async fn unfollow_group(&self, id: &Uuid) -> Result<()> {
-        let tokens = self.require_tokens()?;
-
-        let endpoint = self.base_url.join(&format!("/group/{:x}/follow", id))?;
-
-        let res = self
-            .http
-            .delete(endpoint)
-            .bearer_auth(&tokens.session)
-            .send()
-            .await?;
-
-        Self::json_api_result::<NoData>(res).await?;
-        Ok(())
-    }
-
-    /// List the followed groups by the logged user.
-    ///
-    /// Requires auth.
-    pub async fn followed_groups(&self, query: &PaginationQuery) -> Result<ScanlationGroupList> {
-        let tokens = self.require_tokens()?;
-
-        let endpoint = self.base_url.join("/user/follows/group")?.query_qs(query);
-
-        let res = self
-            .http
-            .get(endpoint)
-            .bearer_auth(&tokens.session)
-            .send()
-            .await?;
-
-        Self::json_api_results(res).await
-    }
+impl_endpoint! {
+    GET "/user/follows/group",
+    #[query auth] FollowedGroupsReq<'_>,
+    ScanlationGroupList
 }
 
 #[cfg(test)]
@@ -212,9 +163,10 @@ mod tests {
     #[tokio::test]
     async fn list_group() {
         let client = Client::default();
-        let group_request = GroupListRequestBuilder::default();
-        let groups = client
-            .list_group(&group_request.build().unwrap())
+        let groups = ListGroupReqBuilder::default()
+            .build()
+            .unwrap()
+            .send(&client)
             .await
             .unwrap();
         assert_eq!(groups.offset, 0);

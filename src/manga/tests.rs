@@ -1,7 +1,6 @@
-
 #![cfg(test)]
 
-use crate::ResourceType;
+use crate::{Client, ResourceType};
 
 use super::*;
 use chrono::prelude::*;
@@ -12,7 +11,7 @@ use pretty_assertions::assert_eq;
 async fn list_manga() {
     let client = Client::default();
     let query = MangaQuery::default();
-    let manga = client.list_manga(&query).await.unwrap();
+    let manga = ListManga { query: &query }.send(&client).await.unwrap();
     assert_eq!(manga.offset, 0);
     assert_eq!(manga.limit, 10);
 }
@@ -21,7 +20,7 @@ async fn list_manga() {
 async fn view_manga() {
     let id = Uuid::parse_str("32d76d19-8a05-4db0-9fc2-e0b0648fe9d0").unwrap();
     let client = Client::default();
-    let manga_result = client.view_manga(&id).await.unwrap();
+    let manga_result = ViewManga { id: &id }.send(&client).await.unwrap();
 
     let manga = manga_result.data;
     assert_eq!(manga.id, id);
@@ -44,7 +43,7 @@ async fn view_manga() {
 #[tokio::test]
 async fn random_manga() {
     let client = Client::default();
-    let manga_result = client.random_manga().await.unwrap();
+    let manga_result = RandomManga.send(&client).await.unwrap();
     let manga = manga_result.data;
     assert_eq!(manga.r#type, ResourceType::Manga);
 }
@@ -52,7 +51,7 @@ async fn random_manga() {
 #[tokio::test]
 async fn tag_list() {
     let client = Client::default();
-    let tag_results = client.tag_list().await.unwrap();
+    let tag_results = TagList.send(&client).await.unwrap();
 
     for result in &tag_results {
         let tag = &result.as_ref().unwrap().data;

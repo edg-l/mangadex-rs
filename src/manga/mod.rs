@@ -1,7 +1,6 @@
-use crate::{errors::Result, ApiData, Client, Endpoint, NoData, PaginationQuery};
+use crate::{errors::Result, NoData, PaginationQuery};
 
-use reqwest::Method;
-use std::{borrow::Cow, collections::HashMap};
+use serde::Serialize;
 use uuid::Uuid;
 
 mod tests;
@@ -20,22 +19,16 @@ pub use status::*;
 /// Search a list of manga
 ///
 /// Call to `GET /manga`
+#[derive(Debug, Serialize, Clone)]
 pub struct ListManga<'a> {
+    #[serde(flatten)]
     pub query: &'a MangaQuery,
 }
 
-impl Endpoint for ListManga<'_> {
-    type Query = MangaQuery;
-    type Body = ();
-    type Response = MangaList;
-
-    fn path(&self) -> Cow<'static, str> {
-        Cow::Borrowed("/manga")
-    }
-
-    fn query(&self) -> Option<&Self::Query> {
-        Some(&self.query)
-    }
+impl_endpoint! {
+    GET "/manga",
+    #[query] ListManga<'_>,
+    MangaList
 }
 
 /// Create manga (requires authentication)
@@ -43,30 +36,16 @@ impl Endpoint for ListManga<'_> {
 /// Create a new manga
 ///
 /// Call to `POST /manga`
+#[derive(Debug, Serialize, Clone)]
 pub struct CreateManga<'a> {
+    #[serde(flatten)]
     pub request: &'a MangaRequest,
 }
 
-impl Endpoint for CreateManga<'_> {
-    type Query = ();
-    type Body = MangaRequest;
-    type Response = MangaResponse;
-
-    fn path(&self) -> Cow<str> {
-        Cow::Borrowed("/manga")
-    }
-
-    fn method(&self) -> Method {
-        Method::POST
-    }
-
-    fn require_auth(&self) -> bool {
-        true
-    }
-
-    fn body(&self) -> Option<&Self::Body> {
-        Some(&self.request)
-    }
+impl_endpoint! {
+    POST "/manga",
+    #[body auth] CreateManga<'_>,
+    #[flatten_result] MangaResponse
 }
 
 /// Update manga (requires authentication)
@@ -74,98 +53,60 @@ impl Endpoint for CreateManga<'_> {
 /// Update an existing manga
 ///
 /// Call to `PUT /manga/{id}`
+#[derive(Debug, Serialize, Clone)]
 pub struct UpdateManga<'a> {
+    #[serde(skip)]
     pub id: &'a Uuid,
+    #[serde(flatten)]
     pub request: &'a MangaRequest,
 }
 
-impl Endpoint for UpdateManga<'_> {
-    type Query = ();
-    type Body = MangaRequest;
-    type Response = MangaResponse;
-
-    fn path(&self) -> Cow<str> {
-        format!("/manga/{:x}", self.id).into()
-    }
-
-    fn method(&self) -> Method {
-        Method::PUT
-    }
-
-    fn require_auth(&self) -> bool {
-        true
-    }
-
-    fn body(&self) -> Option<&Self::Body> {
-        Some(&self.request)
-    }
+impl_endpoint! {
+    PUT ("/manga/{:x}", id),
+    #[body auth] UpdateManga<'_>,
+    #[flatten_result] MangaResponse
 }
 
 /// View manga
 ///
 /// Call to `GET /manga/{id}`
+#[derive(Debug, Clone)]
 pub struct ViewManga<'a> {
     pub id: &'a Uuid,
 }
 
-impl Endpoint for ViewManga<'_> {
-    type Query = ();
-    type Body = ();
-    type Response = MangaResponse;
-
-    fn path(&self) -> Cow<str> {
-        Cow::Owned(format!("/manga/{:x}", self.id))
-    }
+impl_endpoint! {
+    GET ("/manga/{:x}", id),
+    #[no_data] ViewManga<'_>,
+    #[flatten_result] MangaResponse
 }
 
 /// Delete manga (requires authentication)
 ///
 /// Call to `DELETE /manga/{id}`
+#[derive(Debug, Clone)]
 pub struct DeleteManga<'a> {
     pub id: &'a Uuid,
 }
 
-impl Endpoint for DeleteManga<'_> {
-    type Query = ();
-    type Body = ();
-    type Response = Result<NoData>;
-
-    fn path(&self) -> Cow<str> {
-        Cow::Owned(format!("/manga/{:x}", self.id))
-    }
-
-    fn method(&self) -> Method {
-        Method::DELETE
-    }
-
-    fn require_auth(&self) -> bool {
-        true
-    }
+impl_endpoint! {
+    DELETE ("/manga/{:x}", id),
+    #[no_data auth] DeleteManga<'_>,
+    #[discard_result] Result<NoData>
 }
 
 /// Follow manga (requires authentication)
 ///
 /// Call to `POST /manga/{id}/follow`
+#[derive(Debug, Clone)]
 pub struct FollowManga<'a> {
     pub id: &'a Uuid,
 }
 
-impl Endpoint for FollowManga<'_> {
-    type Query = ();
-    type Body = ();
-    type Response = Result<NoData>;
-
-    fn path(&self) -> Cow<str> {
-        Cow::Owned(format!("/manga/{:x}/follow", self.id))
-    }
-
-    fn method(&self) -> Method {
-        Method::POST
-    }
-
-    fn require_auth(&self) -> bool {
-        true
-    }
+impl_endpoint! {
+    POST ("/manga/{:x}/follow", id),
+    #[no_data auth] FollowManga<'_>,
+    #[discard_result] Result<NoData>
 }
 
 /// Unfollow manga (requires authentication)
@@ -175,47 +116,25 @@ pub struct UnfollowManga<'a> {
     pub id: &'a Uuid,
 }
 
-impl Endpoint for UnfollowManga<'_> {
-    type Query = ();
-    type Body = ();
-    type Response = Result<NoData>;
-
-    fn path(&self) -> Cow<str> {
-        Cow::Owned(format!("/manga/{:x}/follow", self.id))
-    }
-
-    fn method(&self) -> Method {
-        Method::DELETE
-    }
-
-    fn require_auth(&self) -> bool {
-        true
-    }
+impl_endpoint! {
+    DELETE ("/manga/{:x}/follow", id),
+    #[no_data auth] UnfollowManga<'_>,
+    #[discard_result] Result<NoData>
 }
 
 /// Get logged user followed manga list (requires authentication)
 ///
 /// Call to `GET /usr/follows/manga`
+#[derive(Debug, Serialize, Clone)]
 pub struct FollowedMangaList<'a> {
+    #[serde(flatten)]
     pub query: &'a PaginationQuery,
 }
 
-impl Endpoint for FollowedMangaList<'_> {
-    type Query = PaginationQuery;
-    type Body = ();
-    type Response = MangaList;
-
-    fn path(&self) -> Cow<str> {
-        Cow::Borrowed("/user/follows/manga")
-    }
-
-    fn require_auth(&self) -> bool {
-        true
-    }
-
-    fn query(&self) -> Option<&Self::Query> {
-        Some(&self.query)
-    }
+impl_endpoint! {
+    GET "/user/follows/manga",
+    #[query auth] FollowedMangaList<'_>,
+    MangaList
 }
 
 /// Get a random manga
@@ -223,14 +142,10 @@ impl Endpoint for FollowedMangaList<'_> {
 /// Call to `GET /manga/random`
 pub struct RandomManga;
 
-impl Endpoint for RandomManga {
-    type Query = ();
-    type Body = ();
-    type Response = MangaResponse;
-
-    fn path(&self) -> Cow<str> {
-        Cow::Borrowed("/manga/random")
-    }
+impl_endpoint! {
+    GET "/manga/random",
+    #[no_data] RandomManga,
+    #[flatten_result] MangaResponse
 }
 
 /// Global tag list
@@ -238,110 +153,8 @@ impl Endpoint for RandomManga {
 /// Call to `GET /manga/tags`
 pub struct TagList;
 
-impl Endpoint for TagList {
-    type Query = ();
-    type Body = ();
-    type Response = types::TagList;
-
-    fn path(&self) -> Cow<str> {
-        Cow::Borrowed("/manga/tag")
-    }
-}
-
-impl Client {
-    /// List manga.
-    pub async fn list_manga(&self, query: &MangaQuery) -> Result<MangaList> {
-        self.send_request(&ListManga { query }).await
-    }
-
-    /// Create a manga.
-    ///
-    /// Requires auth.
-    pub async fn create_manga(&self, request: &MangaRequest) -> MangaResponse {
-        self.send_request(&CreateManga { request }).await?
-    }
-
-    /// Update a manga.
-    ///
-    /// Requires auth.
-    pub async fn update_manga(&self, id: &Uuid, request: &MangaRequest) -> MangaResponse {
-        self.send_request(&UpdateManga { id, request }).await?
-    }
-
-    /// View a single manga.
-    pub async fn view_manga(&self, id: &Uuid) -> MangaResponse {
-        self.send_request(&ViewManga { id }).await?
-    }
-
-    /// Delete a manga.
-    ///
-    /// Requires auth.
-    pub async fn delete_manga(&self, id: &Uuid) -> Result<()> {
-        self.send_request(&DeleteManga { id }).await.map(|_| ())
-    }
-
-    pub async fn follow_manga(&self, id: &Uuid) -> Result<()> {
-        self.send_request(&FollowManga { id }).await.map(|_| ())
-    }
-
-    pub async fn unfollow_manga(&self, id: &Uuid) -> Result<()> {
-        self.send_request(&UnfollowManga { id }).await.map(|_| ())
-    }
-
-    pub async fn manga_reading_status(&self, id: &Uuid) -> Result<MangaReadingStatus> {
-        self.send_request(&GetMangaStatus { id })
-            .await?
-            .map(|s| s.status)
-    }
-
-    pub async fn update_manga_reading_status(
-        &self,
-        id: &Uuid,
-        status: MangaReadingStatus,
-    ) -> Result<()> {
-        self.send_request(&UpdateMangaStatus { id, status })
-            .await?
-            .map(|_| ())
-    }
-
-    pub async fn manga_feed(&self, manga_id: &Uuid, query: &MangaFeedQuery) -> Result<ChapterList> {
-        self.send_request(&MangaFeed { manga_id, query }).await
-    }
-
-    /// Get logged User followed Manga feed
-    pub async fn followed_manga_feed(&self, query: &MangaFeedQuery) -> Result<ChapterList> {
-        self.send_request(&FollowedMangaFeed { query }).await
-    }
-
-    pub async fn followed_manga_list(&self, query: &PaginationQuery) -> Result<MangaList> {
-        self.send_request(&FollowedMangaList { query }).await
-    }
-
-    /// Get a random Manga
-    pub async fn random_manga(&self) -> MangaResponse {
-        self.send_request(&RandomManga).await?
-    }
-
-    pub async fn tag_list(&self) -> Result<types::TagList> {
-        self.send_request(&TagList).await
-    }
-
-    /// A list of chapter ids that are marked as read for the given manga ids
-    pub async fn manga_read_markers(&self, manga_ids: &[&Uuid]) -> Result<ApiData<Vec<Uuid>>> {
-        self.send_request(&MangaReadMarkers {
-            ids: manga_ids.into(),
-            // grouped: None,
-        })
-        .await?
-    }
-
-    /// Get all Manga reading status for logged User
-    pub async fn all_manga_reading_status(
-        &self,
-        status: Option<MangaReadingStatus>,
-    ) -> Result<HashMap<Uuid, MangaReadingStatus>> {
-        self.send_request(&AllMangaStatus { status })
-            .await?
-            .map(|s| s.statuses)
-    }
+impl_endpoint! {
+    GET "/manga/tag",
+    #[no_data] TagList,
+    types::TagList
 }

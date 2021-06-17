@@ -1,13 +1,13 @@
 use std::borrow::Cow;
 
 use isolanguage_1::LanguageCode;
-use reqwest::Method;
-use serde::{Deserialize, Deserializer, Serialize};
+use reqwest::{Method, Response};
+use serde::{de::DeserializeOwned, Deserialize, Deserializer, Serialize};
 use uuid::Uuid;
 
 use crate::{
     errors::{ApiErrors, Errors},
-    ApiResult, Result,
+    Client, Result,
 };
 
 pub type LocalizedString = std::collections::HashMap<LanguageCode, String>;
@@ -100,7 +100,30 @@ where
     Ok(opt.unwrap_or_default())
 }
 
-pub trait FromResponse: Sized {
+#[derive(Deserialize)]
+#[serde(tag = "result", remote = "std::result::Result")]
+enum ApiResultDef<T, E> {
+    #[serde(rename = "ok")]
+    Ok(T),
+    #[serde(rename = "error")]
+    Err(E),
+}
+
+#[derive(Deserialize)]
+#[serde(bound = "T: DeserializeOwned, E: DeserializeOwned")]
+pub(crate) struct ApiResult<T, E = ApiErrors>(
+    #[serde(with = "ApiResultDef")] std::result::Result<T, E>,
+);
+
+impl<T, E> ApiResult<T, E> {
+    fn into_result(self) -> Result<T, E> {
+        self.0
+    }
+}
+
+/// So this trait isn't ideal, but it's the only practical way I could figure out on stable Rust,
+// without specialization. With that in mind, please don't expose it to the public API.
+pub(crate) trait FromResponse: Sized {
     type Response;
 
     fn from_response(res: Self::Response) -> Self;
@@ -142,7 +165,7 @@ impl<T> FromResponse for Vec<Result<T, Errors>> {
     }
 }
 
-pub trait Endpoint {
+pub(crate) trait Endpoint {
     type Query: Serialize;
     type Body: Serialize;
     type Response: FromResponse;
@@ -166,9 +189,88 @@ pub trait Endpoint {
     }
 }
 
-// Helper macro to quickly implement endpoint for carious structs
+impl Client {
+    pub(crate) async fn send_request<E>(&self, endpoint: &E) -> Result<E::Response>
+    where
+        E: Endpoint,
+        <<E as Endpoint>::Response as FromResponse>::Response: DeserializeOwned,
+    {
+        let mut endpoint_url = self.base_url.join(&endpoint.path())?;
+        if let Some(query) = endpoint.query() {
+            endpoint_url = endpoint_url.query_qs(query);
+        }
+
+        let mut res = self.http.request(endpoint.method(), endpoint_url);
+        if let Some(body) = endpoint.body() {
+            res = res.json(body);
+        }
+
+        if endpoint.require_auth() {
+            let tokens = self.require_tokens()?;
+            res = res.bearer_auth(&tokens.session);
+        }
+
+        let res = res
+            .send()
+            .await?
+            .json::<<E::Response as FromResponse>::Response>()
+            .await?;
+
+        Ok(FromResponse::from_response(res))
+    }
+}
+
+/// Helper macro to quickly implement the `Endpoint` trait,
+/// and optionally a `send()` method for the input struct.
+///
+/// The first argument is the endpoint, the second the input data, and the third the response.
+/// These arguments are seperated by commas.
+///
+/// The endpoint is specified by the HTTP method, followed by the path. To get a dymanic path
+/// based on the input structure, surround the path with parenthesis:
+/// ```
+/// POST ("/account/activate/{}", id)
+/// ```
+/// The format is the same as the `format!()` macro, except `id` will be substituted by `self.id`,
+/// where `self` represents an instance of the second parameter.
+///
+/// The input structure is preceded by an attribute-like structure. Inside it, it is possible to
+/// specify either `query`, `body`, or `no_data`. In the first case, the input structure will be
+/// serialized as the query parameter, in the second as a json body, and in the third no data will
+/// be sent with the request. If an `auth` tag is also included, the request will not be made if
+/// the user is not authenticated. Some examples of valid tags are:
+/// ```
+/// #[query] QueryReq
+/// #[body] BodyReq
+/// #[query auth] QueryReq
+/// #[no_data] QueryStruct
+/// ```
+/// The input structure itself should implement `serde::Serialize` if it is used as a body or query.
+/// By strategically using `#[serde(skip)]` and `#[serde(flatten)]`, this is powerfull enough for
+/// our use case.
+///
+/// The final argument is the output type, tagged similarly to the input, to modify the behaviour
+/// of the generated `send()` method. Specifically:
+/// - \<no tag\>: `send()` will simply return `Result<Output>`
+/// - `flatten_result`: If `Output = Result<T>`, the return type will be simplified to `Result<T>`
+/// - `discard_result`: If `Output = Result<T>`, discard `T`, and return `Result<()>`
+/// - `no_send`: Do not implement a `send()` function
+///
+/// Example:
+/// ```
+/// impl_endpoint! {
+///     GET "/path/to/endpoint",
+///     #[query] StructWithData<'_>,
+///     #[flatten_result] Result<ResponseType>
+/// }
+/// ```
 macro_rules! impl_endpoint {
-    { $method:ident $path:tt, #[$payload:ident $($auth:ident)?] $typ:ty, $out:ty $(:$out_res:ident)? } => {
+    {
+        $method:ident $path:tt,
+        #[$payload:ident $($auth:ident)?] $typ:ty,
+        $(#[$out_res:ident])? $out:ty
+    } => {
+
         impl $crate::common::Endpoint for $typ {
             type Response = $out;
 
@@ -223,19 +325,10 @@ macro_rules! impl_endpoint {
             }
         }
     };
-    { @send:result, $typ:ty, $out:ty } => {
+    { @send:flatten_result, $typ:ty, $out:ty } => {
         impl $typ {
             pub async fn send(&self, client: &$crate::Client) -> $out {
                 client.send_request(self).await?
-            }
-        }
-    };
-    { @send:no_send, $typ:ty, $out:ty } => { };
-    { @send:discard, $typ:ty, $out:ty } => {
-        impl $typ {
-            pub async fn send(&self, client: &$crate::Client) -> $crate::Result<()> {
-                client.send_request(self).await?;
-                Ok(())
             }
         }
     };
@@ -247,4 +340,46 @@ macro_rules! impl_endpoint {
             }
         }
     };
+    { @send:no_send, $typ:ty, $out:ty } => { };
+}
+
+// TODO: Remove these metods
+impl Client {
+    /// Deserialize ApiResult<T> then convert to Result<T>
+    pub async fn json_api_result<T>(res: Response) -> Result<T>
+    where
+        T: DeserializeOwned,
+    {
+        Ok(res.json::<ApiResult<T, ApiErrors>>().await?.into_result()?)
+    }
+
+    /// Deserialize as Results<ApiResult<T>> then convert to Results<Result<T>>
+    pub async fn json_api_results<T>(res: Response) -> Result<Results<Result<T>>>
+    where
+        T: DeserializeOwned,
+    {
+        let res = res.json::<Results<ApiResult<T, ApiErrors>>>().await?;
+        Ok(Results {
+            results: res
+                .results
+                .into_iter()
+                .map(|r| r.into_result().map_err(|e| e.into()))
+                .collect(),
+            offset: res.offset,
+            limit: res.limit,
+            total: res.total,
+        })
+    }
+
+    /// Deserialize as Vec<ApiResult<T>> then convert to Vec<Result<T>>
+    pub async fn json_api_result_vec<T>(res: Response) -> Result<Vec<Result<T>>>
+    where
+        T: DeserializeOwned,
+    {
+        let res = res.json::<Vec<ApiResult<T, ApiErrors>>>().await?;
+        Ok(res
+            .into_iter()
+            .map(|r| r.into_result().map_err(|e| e.into()))
+            .collect())
+    }
 }
