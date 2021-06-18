@@ -5,9 +5,9 @@ use serde::Serialize;
 use serde_with::skip_serializing_none;
 use uuid::Uuid;
 
-use crate::model::author::*;
-use crate::model::NoData;
-use crate::model::PaginationQuery;
+use crate::schema::author::*;
+use crate::schema::NoData;
+use crate::schema::PaginationQuery;
 use crate::Result;
 
 /// List authors

@@ -6,7 +6,7 @@ pub mod errors;
 // mod jwt;
 
 pub mod api;
-pub mod model;
+pub mod schema;
 
 pub(crate) use common::*;
 

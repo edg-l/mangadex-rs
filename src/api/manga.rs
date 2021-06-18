@@ -3,7 +3,7 @@ use derive_builder::Builder;
 use serde::Serialize;
 use uuid::Uuid;
 
-use crate::model::{manga::*, LanguageCode, NoData};
+use crate::schema::{manga::*, LanguageCode, NoData};
 use crate::{Client, Result};
 
 /// Manga list
@@ -305,7 +305,7 @@ impl_endpoint! {
 mod tests {
 
     use crate::{
-        model::{LanguageCode, ResourceType},
+        schema::{LanguageCode, ResourceType},
         Client,
     };
 

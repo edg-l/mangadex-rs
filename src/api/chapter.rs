@@ -3,7 +3,7 @@ use derive_builder::Builder;
 use serde::Serialize;
 use uuid::Uuid;
 
-use crate::model::{chapter::*, LanguageCode, NoData};
+use crate::schema::{chapter::*, LanguageCode, NoData};
 use crate::Result;
 
 /// Chapter list

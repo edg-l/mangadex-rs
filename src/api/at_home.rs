@@ -4,7 +4,7 @@ use reqwest::Url;
 use serde::Serialize;
 use uuid::Uuid;
 
-use crate::model::at_home::*;
+use crate::schema::at_home::*;
 use crate::{Client, Result};
 
 /// Get MangaDex@Home server URL

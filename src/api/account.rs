@@ -1,7 +1,7 @@
 //! Account management
 
-use crate::model::user::*;
-use crate::model::NoData;
+use crate::schema::user::*;
+use crate::schema::NoData;
 
 use crate::Result;
 use serde::Serialize;

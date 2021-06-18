@@ -1,7 +1,7 @@
 use crate::{
     api::auth::{Login, Logout, RefreshToken},
     errors::{Errors, Result},
-    model::auth::{AuthTokens, RefreshTokenResponse},
+    schema::auth::{AuthTokens, RefreshTokenResponse},
     Endpoint, FromResponse, UrlSerdeQS,
 };
 use reqwest::Url;

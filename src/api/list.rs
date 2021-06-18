@@ -5,11 +5,11 @@ use serde::Serialize;
 use uuid::Uuid;
 
 use crate::{
-    model::{NoData, PaginationQuery},
+    schema::{NoData, PaginationQuery},
     Result,
 };
 
-use crate::model::list::*;
+use crate::schema::list::*;
 
 /// Create custom list (requires authentication)
 ///

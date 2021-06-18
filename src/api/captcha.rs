@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-use crate::{model::NoData, Result};
+use crate::{schema::NoData, Result};
 
 #[derive(Debug, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]

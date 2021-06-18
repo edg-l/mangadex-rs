@@ -5,7 +5,7 @@ use derive_builder::Builder;
 use serde::Serialize;
 use uuid::Uuid;
 
-use crate::model::{chapter::ChapterList, feed::*, LanguageCode};
+use crate::schema::{chapter::ChapterList, feed::*, LanguageCode};
 
 /// Manga feed
 ///

@@ -1,11 +1,11 @@
 //! Scanlation groups
 
-use crate::{model::NoData, Result};
+use crate::{schema::NoData, Result};
 use derive_builder::Builder;
 use serde::Serialize;
 use uuid::Uuid;
 
-use crate::model::group::*;
+use crate::schema::group::*;
 
 /// Lists canlation groups
 ///

@@ -1,7 +1,7 @@
 //! User authentication
 
-use crate::model::auth::*;
-use crate::model::NoData;
+use crate::schema::auth::*;
+use crate::schema::NoData;
 use crate::Result;
 
 use serde::Serialize;

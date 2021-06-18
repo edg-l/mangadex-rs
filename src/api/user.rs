@@ -2,7 +2,7 @@ use derive_builder::Builder;
 use serde::Serialize;
 use uuid::Uuid;
 
-use crate::model::{group::ScanlationGroupList, manga::MangaList, user::*, NoData};
+use crate::schema::{group::ScanlationGroupList, manga::MangaList, user::*, NoData};
 use crate::Result;
 
 /// List users (requires authentication)

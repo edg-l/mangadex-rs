@@ -3,7 +3,7 @@
 use derive_builder::Builder;
 use serde::Serialize;
 
-use crate::model::legacy::*;
+use crate::schema::legacy::*;
 
 /// Legacy id mapping
 ///

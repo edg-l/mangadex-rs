@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use crate::{model::OrderType, Result};
+use crate::{schema::OrderType, Result};
 
 use super::{ApiData, ApiObject, Results};
 

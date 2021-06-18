@@ -4,7 +4,7 @@ use derive_builder::Builder;
 use serde::Serialize;
 use uuid::Uuid;
 
-use crate::model::{cover::*, NoData};
+use crate::schema::{cover::*, NoData};
 use crate::Result;
 
 /// Cover art list
