@@ -1,29 +1,27 @@
-use crate::{common::ApiObject, errors::Result, ApiData, NoData};
-use serde::{Deserialize, Serialize};
+//! Account management
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct UserAttributes {
-    pub username: String,
-    pub version: i32,
-}
+use crate::model::account::*;
+use crate::model::NoData;
 
-pub type User = ApiObject<UserAttributes>;
-pub type UserResponse = Result<ApiData<User>>;
+use crate::Result;
+use serde::Serialize;
 
 /// Create account
 ///
 /// Call to `POST /account/create`
 #[derive(Debug, Serialize, Clone)]
-pub struct CreateAccountReq<'a> {
-    username: &'a str,
-    password: &'a str,
-    email: &'a str,
+pub struct CreateAccount<'a> {
+    /// Username (length 1 to 64)
+    pub username: &'a str,
+    /// Password (length 8 to 1024)
+    pub password: &'a str,
+    /// Email
+    pub email: &'a str,
 }
 
 impl_endpoint! {
     POST "/account/create",
-    #[body] CreateAccountReq<'_>,
+    #[body] CreateAccount<'_>,
     #[flatten_result] UserResponse
 }
 
@@ -31,13 +29,14 @@ impl_endpoint! {
 ///
 /// Call to `GET /account/activate/{code}`
 #[derive(Debug, Clone)]
-pub struct ActivateAccountReq<'a> {
-    code: &'a str,
+pub struct ActivateAccount<'a> {
+    /// Account activation code
+    pub code: &'a str,
 }
 
 impl_endpoint! {
     GET ("/account/activate/{}", code),
-    #[no_data] ActivateAccountReq<'_>,
+    #[no_data] ActivateAccount<'_>,
     #[discard_result] Result<NoData>
 }
 
@@ -45,13 +44,14 @@ impl_endpoint! {
 ///
 /// Call to `POST /account/activate/resend`
 #[derive(Debug, Serialize, Clone)]
-pub struct ResendActivationCodeReq<'a> {
-    email: &'a str,
+pub struct ResendActivationCode<'a> {
+    /// Email
+    pub email: &'a str,
 }
 
 impl_endpoint! {
     POST "/account/activate/resend",
-    #[body] ResendActivationCodeReq<'_>,
+    #[body] ResendActivationCode<'_>,
     #[discard_result] Result<NoData>
 }
 
@@ -59,13 +59,14 @@ impl_endpoint! {
 ///
 /// Call to `POST /account/recover`
 #[derive(Debug, Serialize, Clone)]
-pub struct RecoverAccountReq<'a> {
-    email: &'a str,
+pub struct RecoverAccount<'a> {
+    /// Email
+    pub email: &'a str,
 }
 
 impl_endpoint! {
     POST "/account/recover",
-    #[body] RecoverAccountReq<'_>,
+    #[body] RecoverAccount<'_>,
     #[discard_result] Result<NoData>
 }
 
@@ -74,14 +75,16 @@ impl_endpoint! {
 /// Call to `POST /account/recover`
 #[derive(Debug, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct CompleteAccountRecoverReq<'a> {
+pub struct CompleteAccountRecover<'a> {
+    /// Account recovery code
     #[serde(skip)]
     code: &'a str,
+    /// New password (length 8 to 1024)
     new_password: &'a str,
 }
 
 impl_endpoint! {
     POST ("/account/recover/{}", code),
-    #[body] CompleteAccountRecoverReq<'_>,
+    #[body] CompleteAccountRecover<'_>,
     #[discard_result] Result<NoData>
 }

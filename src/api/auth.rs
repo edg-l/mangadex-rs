@@ -1,130 +1,85 @@
-use super::Client;
-use crate::common::*;
-use crate::errors::*;
-use serde::{Deserialize, Serialize};
+//! User authentication
 
-/// Tokens returned on login.
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct AuthTokens {
-    /// A token that lives for 15 minutes.
-    pub session: String,
-    /// A token that lives for 1 month. Allows getting another refresh token.
-    pub refresh: String,
-}
+use crate::model::auth::*;
+use crate::model::NoData;
+use crate::Result;
 
-#[derive(Debug, Deserialize, Clone)]
-pub struct LoginResponse {
-    pub token: AuthTokens,
-}
+use serde::Serialize;
 
-/// Response when checking a token.
-#[derive(Debug, Deserialize, Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct CheckTokenResponse {
-    pub is_authenticated: bool,
-    pub roles: Vec<String>,
-    pub permissions: Vec<String>,
-}
-
-/// The response when refreshing the session token.
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct RefreshTokenResponse {
-    pub token: AuthTokens,
-    pub message: Option<String>,
-}
-
+/// Login with given username and password
+///
+/// This struct only does the API call.
+/// In order to update the tokens used by the [`Client`][crate::Client], use the
+/// [`Client::login()`][crate::Client::login()] method.
+///
+/// Call to `POST /auth/login`
 #[derive(Debug, Serialize, Clone)]
-pub struct LoginReq<'a> {
-    username: &'a str,
-    password: &'a str,
+pub struct Login<'a> {
+    /// Username (length 1 to 64)
+    pub username: &'a str,
+    /// Password (length 8 to 1024)
+    pub password: &'a str,
 }
 
 impl_endpoint! {
     POST "/auth/login",
-    #[body] LoginReq<'_>,
+    #[body] Login<'_>,
     #[flatten_result] Result<LoginResponse>
 }
 
+/// Check permissions for the logged user
+///
+/// Call to `GET /auth/check`
 #[derive(Debug, Clone)]
-pub struct CheckTokenReq;
+pub struct CheckToken;
 
 impl_endpoint! {
     GET "/auth/check",
-    #[no_data auth] CheckTokenReq,
+    #[no_data auth] CheckToken,
     #[flatten_result] Result<CheckTokenResponse>
 }
 
+/// Send a logout request for the logged user
+///
+/// This struct only does the API call.
+/// In order to update the tokens used by the [`Client`][crate::Client], use the
+/// [`Client::logout()`][crate::Client::logout()] method.
+///
+/// Call to `POST /auth/logout`
 #[derive(Debug, Clone)]
-pub struct LogoutReq;
+pub struct Logout;
 
 impl_endpoint! {
     POST "/auth/logout",
-    #[no_data auth] LogoutReq,
+    #[no_data auth] Logout,
     #[discard_result] Result<NoData>
 }
 
+/// Get a new session and refresh token
+///
+/// This struct only does the API call.
+/// In order to update the tokens used by the [`Client`][crate::Client], use the
+/// [`Client::refresh_tokens()`][crate::Client::refresh_tokens()] method.
+///
+/// Call to `POST /auth/refresh`
 #[derive(Debug, Serialize, Clone)]
-pub struct RefreshTokenReq<'a> {
-    pub token: &'a str,
+pub struct RefreshToken<'a> {
+    /// Refresh token
+    #[serde(rename = "token")]
+    pub refresh_token: &'a str,
 }
 
 impl_endpoint! {
     POST "/auth/refresh",
-    #[body] RefreshTokenReq<'_>,
+    #[body] RefreshToken<'_>,
     #[flatten_result] Result<RefreshTokenResponse>
-}
-
-impl Client {
-    /// Login endpoint
-    ///
-    /// * `username` - Should be between [1, 64] characters.
-    /// * `password` - Should be between [8, 1024] characters.
-    pub async fn login(&mut self, username: &str, password: &str) -> Result<&AuthTokens> {
-        let tokens = LoginReq { username, password }.send(self).await?.token;
-
-        self.set_tokens(Some(tokens));
-        Ok(self.get_tokens().unwrap())
-    }
-
-    /// Get the tokens used for authentication
-    pub fn get_tokens(&self) -> Option<&AuthTokens> {
-        self.tokens.as_ref()
-    }
-
-    /// Set the tokens used for authentication.
-    pub fn set_tokens(&mut self, tokens: Option<AuthTokens>) {
-        self.tokens = tokens;
-    }
-
-    /// Convenience method to be used with ?.
-    pub(crate) fn require_tokens(&self) -> Result<&AuthTokens> {
-        self.tokens.as_ref().ok_or(Errors::MissingTokens)
-    }
-
-    /// Logout endpoint
-    pub async fn logout(&mut self) -> Result<()> {
-        LogoutReq.send(self).await?;
-
-        self.set_tokens(None);
-        Ok(())
-    }
-
-    /// Refresh token endpoint
-    pub async fn refresh_token(&mut self) -> Result<RefreshTokenResponse> {
-        let tokens = self.require_tokens()?;
-        let res = RefreshTokenReq {
-            token: &tokens.refresh,
-        }
-        .send(self)
-        .await?;
-
-        self.set_tokens(Some(res.token.clone()));
-        Ok(res)
-    }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::errors::Errors;
+    use crate::Client;
+
     use super::*;
     use assert_matches::assert_matches;
     use httpmock::Method::*;
@@ -271,7 +226,7 @@ mod tests {
 
         assert_eq!(client.get_tokens().is_some(), true);
 
-        let info = CheckTokenReq.send(&client).await?;
+        let info = CheckToken.send(&client).await?;
 
         mock.assert_async().await;
         assert_eq!(info.is_authenticated, true);
@@ -393,7 +348,7 @@ mod tests {
 
         assert_eq!(client.get_tokens().is_some(), true);
 
-        let res = client.refresh_token().await?;
+        let res = client.refresh_tokens().await?;
 
         mock.assert_async().await;
         assert_eq!(client.get_tokens().is_some(), true);
@@ -401,8 +356,8 @@ mod tests {
 
         assert_eq!(tokens.session.as_str(), "sessiontoken2");
         assert_eq!(tokens.refresh.as_str(), "refreshtoken2");
-        assert_eq!(res.token.session.as_str(), "sessiontoken2");
-        assert_eq!(res.token.refresh.as_str(), "refreshtoken2");
+        assert_eq!(res.tokens.session.as_str(), "sessiontoken2");
+        assert_eq!(res.tokens.refresh.as_str(), "refreshtoken2");
 
         Ok(())
     }
@@ -441,7 +396,7 @@ mod tests {
                 }));
                 assert_eq!(client.get_tokens().is_some(), true);
 
-                let errors = client.refresh_token().await.expect_err("expected error");
+                let errors = client.refresh_tokens().await.expect_err("expected error");
                 mock.assert_async().await;
 
                 assert_matches!(errors, Errors::HttpWithBody(errs) if errs.errors.len() == 1usize => {

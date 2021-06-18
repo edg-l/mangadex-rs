@@ -1,58 +1,41 @@
+//! Legacy mapping
+
 use derive_builder::Builder;
-use serde::{Deserialize, Serialize};
-use uuid::Uuid;
+use serde::Serialize;
 
-use crate::{ApiData, ApiObject, Client, Result};
+use crate::model::legacy::*;
 
-#[derive(Debug, Serialize, Deserialize, Clone, Copy, Hash, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-pub enum MappingType {
-    Group,
-    Manga,
-    Chapter,
-    Tag,
-}
-
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, Hash, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-pub enum MappingIdType {
-    MappingId,
-}
-
-#[derive(Debug, Deserialize, Clone, Hash, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-pub struct MappingIdAttributes {
-    pub r#type: MappingType,
-    pub legacy_id: u32,
-    pub new_id: Uuid,
-}
-
-pub type MappingId = ApiObject<MappingIdAttributes, MappingIdType>;
-pub type MappingIdResponse = Result<ApiData<MappingId>>;
-
+/// Legacy id mapping
+///
+/// Call to `POST /legacy/mapping`
 #[derive(Debug, Builder, Serialize, Clone, Hash, PartialEq, Eq)]
 #[builder(setter(into))]
 #[serde(rename_all = "camelCase")]
-pub struct LegacyMappingReq {
+pub struct LegacyMapping {
+    /// Legacy id type
     #[builder(setter(name = "query_type"))]
     pub r#type: MappingType,
 
+    /// List of legacy ids
     #[builder(setter(each = "add_id"))]
     pub ids: Vec<u32>,
 }
 
 impl_endpoint! {
     POST "/legacy/mapping",
-    #[body] LegacyMappingReq,
+    #[body] LegacyMapping,
     Vec<MappingIdResponse>
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::Client;
+
     use super::*;
     use httpmock::{Method::POST, MockServer};
     use pretty_assertions::assert_eq;
     use serde_json::json;
+    use uuid::Uuid;
 
     #[tokio::test]
     async fn legacy_mapping() {
@@ -85,7 +68,7 @@ mod tests {
             .await;
 
         let client = Client::new(&server.base_url()).unwrap();
-        let mappings = LegacyMappingReq {
+        let mappings = LegacyMapping {
             r#type: MappingType::Manga,
             ids: vec![1],
         }

@@ -1,14 +1,12 @@
-use crate::{
-    common::{deserialize_null_default, ApiObject, LocalizedString, Results},
-    errors::Result,
-    ApiData, PaginationQuery,
-};
+use crate::{common::deserialize_null_default, errors::Result};
 use chrono::{DateTime, Utc};
 use derive_builder::Builder;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use std::collections::HashMap;
 use uuid::Uuid;
+
+use super::{ApiData, ApiObject, LocalizedString, OrderType, PaginationQuery, Results};
 
 /// The tag mode.
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, Hash, PartialEq, Eq)]
@@ -18,6 +16,17 @@ pub enum TagMode {
     And,
     // OR Mode
     Or,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct TagAttributes {
+    pub name: LocalizedString,
+    // TODO: Known issue: empty descriptions return [] instead of {}
+    #[serde(skip)]
+    pub description: LocalizedString,
+    pub group: String,
+    pub version: i32,
 }
 
 /// The status of a manga.
@@ -49,13 +58,6 @@ pub enum ContentRating {
     Suggestive,
     Erotica,
     Pornographic,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone, Copy, Hash, PartialEq, Eq)]
-#[serde(rename_all = "lowercase")]
-pub enum OrderType {
-    Asc,
-    Desc,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Hash, PartialEq, Eq)]
@@ -123,14 +125,15 @@ pub struct MangaQuery {
 
 #[skip_serializing_none]
 #[derive(Debug, Builder, Serialize, Clone, PartialEq, Eq)]
-#[builder(setter(into, strip_option))]
+#[builder(setter(strip_option))]
 #[serde(rename_all = "camelCase")]
 pub struct MangaFeedQuery {
     #[serde(flatten)]
     pub pagination: PaginationQuery,
 
     #[builder(default)]
-    pub translated_language: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub translated_language: Vec<String>,
 
     #[builder(default)]
     pub created_at_since: Option<DateTime<Utc>>,
@@ -143,17 +146,6 @@ pub struct MangaFeedQuery {
 
     #[builder(default)]
     pub order: Option<FeedOrder>,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-pub struct TagAttributes {
-    pub name: LocalizedString,
-    // TODO: Known issue: empty descriptions return [] instead of {}
-    #[serde(skip)]
-    pub description: LocalizedString,
-    pub group: String,
-    pub version: i32,
 }
 
 #[skip_serializing_none]
