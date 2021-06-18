@@ -14,18 +14,17 @@ description = "Unofficial asynchronous mangadex API wrapper for rust"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-chrono = { version = "0.4", features = ["serde"] }
+chrono = { version="0.4", features=["serde"] }
 hmac = "0.10"
 jwt = "0.13"
-reqwest = { version = "0.11", features = ["json"] }
-serde = { version = "1.0", features = ["derive"] }
-serde_with = { version = "1.9", features = ["json", "chrono"] }
+reqwest = { version="0.11", features=["json"] }
+serde = { version="1.0", features=["derive"] }
+serde_with = { version="1.9", features=["json", "chrono"] }
 sha2 = "0.9"
 thiserror = "1.0"
-tokio = { version = "1", features = ["full"] }
+tokio = { version="1", features=["full"] }
 url = "2.2"
-uuid = { version = "0.8", features = ["serde"] }
-isolanguage-1 = { version = "0.2", features = ["serde"] }
+uuid = { version="0.8", features=["serde"] }
 derive_builder = "0.10"
 serde_qs = "0.8"
 serde_json = "1.0"

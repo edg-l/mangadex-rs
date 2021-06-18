@@ -266,11 +266,13 @@ impl_endpoint! {
 #[cfg(test)]
 mod tests {
 
-    use crate::{model::ResourceType, Client};
+    use crate::{
+        model::{LanguageCode, ResourceType},
+        Client,
+    };
 
     use super::*;
     use chrono::prelude::*;
-    use isolanguage_1::LanguageCode;
     use pretty_assertions::assert_eq;
 
     #[tokio::test]
@@ -294,7 +296,7 @@ mod tests {
             manga
                 .attributes
                 .title
-                .get(&LanguageCode::En)
+                .get(&LanguageCode::English)
                 .map(String::as_str),
             Some("Solo Leveling")
         );

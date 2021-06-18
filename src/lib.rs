@@ -13,7 +13,6 @@ pub(crate) use common::*;
 pub use client::Client;
 pub use errors::Result;
 
-pub use isolanguage_1;
 pub use reqwest;
 
 #[cfg(test)]
