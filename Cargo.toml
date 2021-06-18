@@ -1,7 +1,10 @@
 [package]
 name = "mangadex"
 version = "0.1.1"
-authors = ["Edgar <git@edgarluque.com>"]
+authors = [
+    "Edgar <git@edgarluque.com>",
+    "George Tsiamasiotis <git@gtsiam.anonaddy.com>",
+]
 edition = "2018"
 license = "MIT"
 documentation = "https://docs.rs/mangadex"
@@ -15,14 +18,10 @@ description = "Unofficial asynchronous mangadex API wrapper for rust"
 
 [dependencies]
 chrono = { version="0.4", features=["serde"] }
-hmac = "0.10"
-jwt = "0.13"
 reqwest = { version="0.11", features=["json", "multipart"] }
 serde = { version="1.0", features=["derive"] }
 serde_with = { version="1.9", features=["json", "chrono"] }
-sha2 = "0.9"
 thiserror = "1.0"
-tokio = { version="1", features=["full"] }
 url = "2.2"
 uuid = { version="0.8", features=["serde"] }
 derive_builder = "0.10"
@@ -30,9 +29,10 @@ serde_qs = "0.8"
 serde_json = "1.0"
 
 [dev-dependencies]
-anyhow = "1.0.40"
-assert_matches = "1.5.0"
+tokio = { version="1", features=["full"] }
+anyhow = "1.0"
+assert_matches = "1.5"
 ctor = "0.1"
 dotenv = "0.15"
-httpmock = "0.5.8"
+httpmock = "0.5"
 pretty_assertions = "0.7"

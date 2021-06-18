@@ -7,6 +7,7 @@ use crate::{
 use reqwest::Url;
 use serde::de::DeserializeOwned;
 
+#[cfg(not(target_arch = "wasm32"))]
 static APP_USER_AGENT: &str = concat!(
     env!("CARGO_PKG_NAME"),
     "-rs",
@@ -31,9 +32,12 @@ impl Default for Client {
 impl Client {
     /// Create a new client.
     pub fn new(base_url: &str) -> Result<Self> {
-        let client = reqwest::Client::builder()
-            .user_agent(APP_USER_AGENT)
-            .build()?;
+        let client = reqwest::Client::builder();
+
+        #[cfg(not(target_arch = "wasm32"))]
+        let client = client.user_agent(APP_USER_AGENT);
+
+        let client = client.build()?;
 
         Ok(Self {
             http: client,
