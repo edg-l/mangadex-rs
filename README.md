@@ -10,7 +10,9 @@ Unofficial asynchronous mangadex API wrapper for rust
 
 https://rust-lang.github.io/api-guidelines/checklist.html
 
-Api reference: https://api.mangadex.org/docs.html
+The api reference is available in the [default](https://api.mangadex.org/docs.html) format, or in
+[swagger](https://api.mangadex.org/swagger.html) format. The currently targeted api (`api.yaml`) is
+tracked in the repository to facilitate easier updates across versions.
 
 ## TODO
 
