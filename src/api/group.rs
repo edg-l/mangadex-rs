@@ -1,9 +1,6 @@
 //! Scanlation groups
 
-use crate::{
-    model::{NoData, PaginationQuery},
-    Result,
-};
+use crate::{model::NoData, Result};
 use derive_builder::Builder;
 use serde::Serialize;
 use uuid::Uuid;
@@ -16,14 +13,16 @@ use crate::model::group::*;
 #[derive(Debug, Serialize, Builder, Default)]
 #[builder(setter(strip_option), default)]
 pub struct ListGroups<'a> {
-    /// Pagination parameters
-    #[serde(flatten)]
-    pub pagination: PaginationQuery,
+    /// Page size
+    pub limit: Option<i32>,
+
+    /// Page offset
+    pub offset: Option<i32>,
 
     /// Scanlation group ids (limited to 100 per request)
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    #[builder(setter(each = "add_id"))]
-    pub ids: Vec<&'a Uuid>,
+    #[builder(setter(each = "add_group"))]
+    #[serde(rename = "ids")]
+    pub group_ids: Vec<&'a Uuid>,
 
     /// Author name
     pub name: Option<&'a str>,
@@ -137,7 +136,7 @@ impl_endpoint! {
 /// Call to `DELETE /group/{id}/follow`
 pub struct UnfollowGroup<'a> {
     /// Group id
-    id: &'a Uuid,
+    pub id: &'a Uuid,
 }
 
 impl_endpoint! {
@@ -150,15 +149,17 @@ impl_endpoint! {
 ///
 /// Call to `GET /user/follows/group`
 #[derive(Debug, Serialize, Clone)]
-pub struct FollowedGroups<'a> {
-    /// Pagination parameters
-    #[serde(flatten)]
-    pagination: &'a PaginationQuery,
+pub struct FollowedGroups {
+    /// Page size
+    pub limit: Option<i32>,
+
+    /// Page offset
+    pub offset: Option<i32>,
 }
 
 impl_endpoint! {
     GET "/user/follows/group",
-    #[query auth] FollowedGroups<'_>,
+    #[query auth] FollowedGroups,
     ScanlationGroupList
 }
 

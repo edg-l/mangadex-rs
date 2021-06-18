@@ -5,10 +5,7 @@ use serde::Serialize;
 use uuid::Uuid;
 
 use crate::{
-    model::{
-        manga::{ChapterList, MangaFeedQuery},
-        NoData, PaginationQuery,
-    },
+    model::{NoData, PaginationQuery},
     Result,
 };
 
@@ -171,24 +168,4 @@ impl_endpoint! {
     GET ("/user/{:x}/list", user_id),
     #[query auth] GetUserCustomLists<'_>,
     CustomListList
-}
-
-/// Custom list manga feed
-///
-/// Call to `GET /list/{list_id}/feed`
-#[derive(Debug, Serialize, Clone)]
-pub struct CustomListMangaFeed<'a> {
-    /// List id
-    #[serde(skip)]
-    pub list_id: &'a Uuid,
-
-    /// Manga feed query
-    #[serde(flatten)]
-    pub query: &'a MangaFeedQuery,
-}
-
-impl_endpoint! {
-    GET ("/list/{:x}/feed", list_id),
-    #[query] CustomListMangaFeed<'_>,
-    ChapterList
 }

@@ -6,7 +6,7 @@ use serde_with::skip_serializing_none;
 use std::collections::HashMap;
 use uuid::Uuid;
 
-use super::{ApiData, ApiObject, LocalizedString, OrderType, PaginationQuery, Results};
+use super::{ApiData, ApiObject, LocalizedString, OrderType, Results};
 
 /// The tag mode.
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, Hash, PartialEq, Eq)]
@@ -65,38 +65,6 @@ pub enum ContentRating {
 pub enum MangaOrder {
     CreatedAt(OrderType),
     UpdatedAt(OrderType),
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone, Hash, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-pub struct FeedOrder {
-    pub volume: OrderType,
-    pub chapter: OrderType,
-}
-
-#[skip_serializing_none]
-#[derive(Debug, Builder, Serialize, Clone, PartialEq, Eq)]
-#[builder(setter(strip_option))]
-#[serde(rename_all = "camelCase")]
-pub struct MangaFeedQuery {
-    #[serde(flatten)]
-    pub pagination: PaginationQuery,
-
-    #[builder(default)]
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub translated_language: Vec<String>,
-
-    #[builder(default)]
-    pub created_at_since: Option<DateTime<Utc>>,
-
-    #[builder(default)]
-    pub updated_at_since: Option<DateTime<Utc>>,
-
-    #[builder(default)]
-    pub publish_at_since: Option<DateTime<Utc>>,
-
-    #[builder(default)]
-    pub order: Option<FeedOrder>,
 }
 
 #[skip_serializing_none]
