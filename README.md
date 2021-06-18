@@ -14,22 +14,14 @@ Api reference: https://api.mangadex.org/docs.html
 
 ## TODO
 
-- [x] Manga
-- [x] Cover
-- [x] Author
-- [x] Auth
-- [x] Scanlationgroup
-- [x] Feed
-- [ ] CustomList
-- [ ] Captcha
-- [x] AtHome
-- [x] Legacy
-- [x] Infrastructure
-- [x] Account
-- [ ] User
-- [ ] Chapter
-- [ ] Upload
-- [ ] Rate limits
+- [ ] Missing endpoints
+  - [ ] Manga
+    - [ ] `GET manga/{id}/aggregate`
+  - [ ] Upload
+    - [ ] `POST /cover/{mangaId}`
+  - [ ] User
+  - [ ] Chapter
+- [ ] Rate limiting
 - [ ] Includes
 
 ## Tests
