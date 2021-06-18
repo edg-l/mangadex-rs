@@ -78,9 +78,9 @@ impl_endpoint! {
 pub struct CompleteAccountRecover<'a> {
     /// Account recovery code
     #[serde(skip)]
-    code: &'a str,
+    pub code: &'a str,
     /// New password (length 8 to 1024)
-    new_password: &'a str,
+    pub new_password: &'a str,
 }
 
 impl_endpoint! {
