@@ -8,7 +8,7 @@ use crate::model::legacy::*;
 /// Legacy id mapping
 ///
 /// Call to `POST /legacy/mapping`
-#[derive(Debug, Builder, Serialize, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Builder, Serialize, Clone, PartialEq, Eq)]
 #[builder(setter(into))]
 #[serde(rename_all = "camelCase")]
 pub struct LegacyMapping {

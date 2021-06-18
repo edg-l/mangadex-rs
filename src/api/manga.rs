@@ -3,7 +3,7 @@ use derive_builder::Builder;
 use serde::Serialize;
 use uuid::Uuid;
 
-use crate::model::{manga::*, NoData, PaginationQuery};
+use crate::model::{manga::*, NoData};
 use crate::{Client, Result};
 
 /// Manga list
@@ -229,21 +229,6 @@ impl_endpoint! {
     GET "/manga/tag",
     #[no_data] ListTags,
     TagList
-}
-
-/// Get logged user followed manga list (requires authentication)
-///
-/// Call to `GET /usr/follows/manga`
-#[derive(Debug, Serialize, Clone)]
-pub struct ListFollowedManga<'a> {
-    #[serde(flatten)]
-    pub query: &'a PaginationQuery,
-}
-
-impl_endpoint! {
-    GET "/user/follows/manga",
-    #[query auth] ListFollowedManga<'_>,
-    MangaList
 }
 
 /// Get all manga reading status for logged user (requires authentication)

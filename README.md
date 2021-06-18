@@ -14,15 +14,27 @@ Api reference: https://api.mangadex.org/docs.html
 
 ## TODO
 
-- [ ] Missing endpoints
-  - [ ] Manga
-    - [ ] `GET manga/{id}/aggregate`
-  - [ ] Upload
-    - [ ] `POST /cover/{mangaId}`
-  - [ ] User
-  - [ ] Chapter
-- [ ] Rate limiting
-- [ ] Includes
+- Missing endpoints
+  - Manga
+    - `GET manga/{id}/aggregate`
+  - Upload
+    - `POST /cover/{mangaId}`
+  - User
+    - `GET /user`
+    - `GET /user/{id}`
+    - `POST /user/password`
+    - `POST /user/email`
+    - `GET /user/me`
+    - `GET /user/follows/user`
+  - Chapter
+    - `GET /chapter`
+    - `GET /chapter/{id}`
+    - `PUT /chapter/{id}`
+    - `DELETE /chapter/{id}`
+    - `POST /chapter/{id}/read`
+    - `DELETE /chapter/{id}/read`
+- Rate limiting
+- Includes
 
 ## Tests
 

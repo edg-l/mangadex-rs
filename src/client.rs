@@ -110,7 +110,6 @@ impl Client {
         Ok(res)
     }
 
-    // Apparently `GET /ping` does not return JSON, because it's a special snow-flake.
     /// Ping the api server
     pub async fn ping(&self) -> Result<()> {
         let endpoint = self.base_url.join("/ping")?;

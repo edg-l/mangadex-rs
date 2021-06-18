@@ -7,6 +7,7 @@ pub mod chapter;
 pub mod cover;
 pub mod feed;
 pub mod group;
+pub mod infrastructure;
 pub mod legacy;
 pub mod list;
 pub mod manga;
