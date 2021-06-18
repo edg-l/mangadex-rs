@@ -21,13 +21,6 @@ tracked in the repository to facilitate easier updates across versions.
     - `GET manga/{id}/aggregate`
   - Upload
     - `POST /cover/{mangaId}`
-  - Chapter
-    - `GET /chapter`
-    - `GET /chapter/{id}`
-    - `PUT /chapter/{id}`
-    - `DELETE /chapter/{id}`
-    - `POST /chapter/{id}/read`
-    - `DELETE /chapter/{id}/read`
 - Rate limiting
 - Includes
 

@@ -159,22 +159,6 @@ pub struct MangaRequest {
     pub version: i32,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct ChapterAttributes {
-    pub title: String,
-    pub volume: Option<String>,
-    pub translated_language: String,
-    pub hash: String,
-    pub data: Vec<String>,
-    pub data_saver: Vec<String>,
-    pub uploader: Uuid,
-    pub version: i32,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
-    pub publish_at: DateTime<Utc>,
-}
-
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MangaReadingStatuses {
@@ -205,10 +189,6 @@ pub type TagList = Vec<TagResponse>;
 pub type Manga = ApiObject<MangaAttributes>;
 pub type MangaResponse = Result<ApiData<Manga>>;
 pub type MangaList = Results<MangaResponse>;
-
-pub type Chapter = ApiObject<ChapterAttributes>;
-pub type ChapterResponse = Result<ApiData<Chapter>>;
-pub type ChapterList = Results<ChapterResponse>;
 
 pub type MangaReadMarkers = Vec<Uuid>;
 pub type MangaReadMarkerResponse = Result<ApiData<MangaReadMarkers>>;

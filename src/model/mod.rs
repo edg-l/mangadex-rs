@@ -1,6 +1,7 @@
 pub mod at_home;
 pub mod auth;
 pub mod author;
+pub mod chapter;
 pub mod cover;
 pub mod feed;
 pub mod group;
