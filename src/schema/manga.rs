@@ -67,23 +67,7 @@ pub enum MangaOrder {
     UpdatedAt(OrderType),
 }
 
-#[skip_serializing_none]
-#[derive(Debug, Default, Serialize, Deserialize, Clone)]
-pub struct Links {
-    pub al: Option<String>,
-    pub ap: Option<String>,
-    pub bw: Option<String>,
-    pub mu: Option<String>,
-    pub nu: Option<String>,
-    pub kt: Option<String>,
-    pub amz: Option<String>,
-    pub ebj: Option<String>,
-    pub mal: Option<String>,
-    pub raw: Option<String>,
-    pub engtl: Option<String>,
-    #[serde(flatten)]
-    extra: HashMap<String, String>,
-}
+pub type Links = HashMap<String, String>;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
