@@ -1,3 +1,5 @@
+//! User data
+
 use derive_builder::Builder;
 use serde::Serialize;
 use uuid::Uuid;

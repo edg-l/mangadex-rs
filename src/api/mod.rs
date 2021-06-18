@@ -1,3 +1,5 @@
+//! API request wrappers
+
 pub mod account;
 pub mod at_home;
 pub mod auth;
@@ -11,6 +13,4 @@ pub mod infrastructure;
 pub mod legacy;
 pub mod list;
 pub mod manga;
-pub mod search;
-pub mod upload;
 pub mod user;

@@ -1,3 +1,5 @@
+//! Server status
+
 use crate::{Client, Result};
 
 /// Ping the server

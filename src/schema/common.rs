@@ -1,10 +1,8 @@
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{
-    errors::{ApiErrors, Errors},
-    FromResponse,
-};
+use super::errors::ApiErrors;
+use crate::{errors::Errors, FromResponse};
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, Hash, PartialEq, Eq)]
 pub enum LanguageCode {

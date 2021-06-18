@@ -1,7 +1,12 @@
+//! Solve captcha
+
 use serde::Serialize;
 
 use crate::{schema::NoData, Result};
 
+/// Solve captcha
+///
+/// Call to `POST /captcha/solve`
 #[derive(Debug, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SolveCaptcha<'a> {

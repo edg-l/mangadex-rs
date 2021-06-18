@@ -147,7 +147,7 @@ mod tests {
             .expect_err("should return an error");
 
         mock.assert_async().await;
-        assert_matches!(errors, Errors::HttpWithBody(x) if x.errors.is_empty());
+        assert_matches!(errors, Errors::Api(x) if x.errors.is_empty());
 
         Ok(())
     }
@@ -306,7 +306,7 @@ mod tests {
 
         mock.assert_async().await;
 
-        assert_matches!(errors, Errors::HttpWithBody(errs) if errs.errors.len() == 1usize => {
+        assert_matches!(errors, Errors::Api(errs) if errs.errors.len() == 1usize => {
             let error = errs.errors.get(0).unwrap();
             assert_eq!(error.id, uuid::Uuid::parse_str("5e50fc7b-e185-45b1-a692-58e8091b22d2")?);
             assert_eq!(error.title.as_deref(), Some("The service is unavailable"));
@@ -399,7 +399,7 @@ mod tests {
                 let errors = client.refresh_tokens().await.expect_err("expected error");
                 mock.assert_async().await;
 
-                assert_matches!(errors, Errors::HttpWithBody(errs) if errs.errors.len() == 1usize => {
+                assert_matches!(errors, Errors::Api(errs) if errs.errors.len() == 1usize => {
                     let error = errs.errors.get(0).unwrap();
                     assert_eq!(error.id, uuid::Uuid::parse_str("5e50fc7b-e185-45b1-a692-58e8091b22d2")?);
                     assert_eq!(error.title.as_deref(), Some("Error title"));
