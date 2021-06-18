@@ -1,3 +1,5 @@
+use chrono::{DateTime, Utc};
+use derive_builder::Builder;
 use serde::Serialize;
 use uuid::Uuid;
 
@@ -9,10 +11,71 @@ use crate::{Client, Result};
 /// Search a list of manga
 ///
 /// Call to `GET /manga`
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Clone, Builder, Default)]
+#[serde(rename_all = "camelCase")]
+#[builder(setter(into, strip_option), default)]
 pub struct ListManga<'a> {
-    #[serde(flatten)]
-    pub query: &'a MangaQuery,
+    /// Page size
+    pub limit: Option<i32>,
+
+    /// Page offset
+    pub offset: Option<i32>,
+
+    /// Manga title
+    pub title: Option<String>,
+
+    /// Manga authors
+    #[builder(setter(each = "add_author"))]
+    pub authors: Vec<&'a Uuid>,
+
+    /// Manga artists
+    #[builder(setter(each = "add_artist"))]
+    pub artists: Vec<&'a Uuid>,
+
+    /// Year of release
+    pub year: Option<i32>,
+
+    /// Included tags
+    #[builder(setter(each = "include_tag"))]
+    pub included_tags: Vec<&'a Uuid>,
+
+    /// Tag inclusion mode
+    pub included_tags_mode: Option<TagMode>,
+
+    /// Excluded tags
+    #[builder(setter(each = "exclude_tag"))]
+    pub excluded_tags: Vec<&'a Uuid>,
+
+    /// Tag exclusion mode
+    pub excluded_tags_mode: Option<TagMode>,
+
+    /// Manga status
+    #[builder(setter(each = "add_status"))]
+    pub status: Vec<MangaStatus>,
+
+    /// Original language
+    pub original_language: Vec<String>,
+
+    /// Publication demographic
+    #[builder(setter(each = "add_demographic"))]
+    pub publication_demographic: Vec<Demographic>,
+
+    /// Manga ids
+    #[builder(setter(each = "add_manga"))]
+    #[serde(rename = "ids")]
+    pub manga_ids: Vec<Uuid>,
+
+    /// Content rating
+    pub content_rating: Option<ContentRating>,
+
+    /// Created after this time
+    pub created_at_since: Option<DateTime<Utc>>,
+
+    /// Updated after this time
+    pub updated_at_since: Option<DateTime<Utc>>,
+
+    /// Sorting order
+    pub order: Option<MangaOrder>,
 }
 
 impl_endpoint! {
@@ -248,8 +311,7 @@ mod tests {
     #[tokio::test]
     async fn list_manga() {
         let client = Client::default();
-        let query = MangaQuery::default();
-        let manga = ListManga { query: &query }.send(&client).await.unwrap();
+        let manga = ListManga::default().send(&client).await.unwrap();
         assert_eq!(manga.offset, 0);
         assert_eq!(manga.limit, 10);
     }

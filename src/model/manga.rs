@@ -62,9 +62,9 @@ pub enum ContentRating {
 
 #[derive(Debug, Serialize, Deserialize, Clone, Hash, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-pub struct Order {
-    pub created_at: OrderType,
-    pub updated_at: OrderType,
+pub enum MangaOrder {
+    CreatedAt(OrderType),
+    UpdatedAt(OrderType),
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Hash, PartialEq, Eq)]
@@ -72,55 +72,6 @@ pub struct Order {
 pub struct FeedOrder {
     pub volume: OrderType,
     pub chapter: OrderType,
-}
-
-#[skip_serializing_none]
-#[derive(Debug, Builder, Default, Serialize, Deserialize, Clone, Hash, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-#[builder(setter(into, strip_option), default)]
-pub struct MangaQuery {
-    #[serde(flatten)]
-    pub pagination: PaginationQuery,
-
-    pub title: Option<String>,
-
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    #[builder(setter(each = "add_author"))]
-    pub authors: Vec<Uuid>,
-
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    #[builder(setter(each = "add_artist"))]
-    pub artists: Vec<Uuid>,
-
-    pub year: Option<i32>,
-
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    #[builder(setter(each = "add_tag"))]
-    pub included_tags: Vec<Uuid>,
-
-    pub included_tags_mode: Option<TagMode>,
-
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    #[builder(setter(each = "add_status"))]
-    pub status: Vec<MangaStatus>,
-
-    pub original_language: Option<String>,
-
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    #[builder(setter(each = "add_demographic"))]
-    pub publication_demographic: Vec<Demographic>,
-
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    #[builder(setter(each = "add_id"))]
-    pub ids: Vec<Uuid>,
-
-    pub content_rating: Option<ContentRating>,
-
-    pub created_at_since: Option<DateTime<Utc>>,
-
-    pub updated_at_since: Option<DateTime<Utc>>,
-
-    pub order: Option<Order>,
 }
 
 #[skip_serializing_none]

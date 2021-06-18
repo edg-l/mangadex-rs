@@ -17,7 +17,6 @@ Api reference: https://api.mangadex.org/docs.html
 - [x] Manga
 - [x] Cover
 - [x] Author
-- [ ] Search
 - [x] Auth
 - [x] Scanlationgroup
 - [x] Feed
