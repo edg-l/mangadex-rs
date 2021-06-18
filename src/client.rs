@@ -72,7 +72,7 @@ impl Client {
         Ok(FromResponse::from_response(res))
     }
 
-    /// Login endpoint
+    /// Login
     ///
     /// * `username` - Should be between [1, 64] characters.
     /// * `password` - Should be between [8, 1024] characters.
@@ -93,12 +93,7 @@ impl Client {
         self.tokens = tokens;
     }
 
-    /// Convenience method to be used with ?.
-    pub(crate) fn require_tokens(&self) -> Result<&AuthTokens> {
-        self.tokens.as_ref().ok_or(Errors::MissingTokens)
-    }
-
-    /// Logout endpoint
+    /// Logout
     pub async fn logout(&mut self) -> Result<()> {
         Logout.send(self).await?;
 
@@ -108,7 +103,7 @@ impl Client {
 
     /// Refresh token endpoint
     pub async fn refresh_tokens(&mut self) -> Result<RefreshTokenResponse> {
-        let refresh_token = &self.require_tokens()?.refresh;
+        let refresh_token = &self.get_tokens().ok_or(Errors::MissingTokens)?.refresh;
         let res = RefreshToken { refresh_token }.send(self).await?;
 
         self.set_tokens(Some(res.tokens.clone()));
@@ -116,6 +111,7 @@ impl Client {
     }
 
     // Apparently `GET /ping` does not return JSON, because it's a special snow-flake.
+    /// Ping the api server
     pub async fn ping(&self) -> Result<()> {
         let endpoint = self.base_url.join("/ping")?;
 
