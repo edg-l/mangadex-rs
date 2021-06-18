@@ -290,3 +290,6 @@ pub type MangaList = Results<MangaResponse>;
 pub type Chapter = ApiObject<ChapterAttributes>;
 pub type ChapterResponse = Result<ApiData<Chapter>>;
 pub type ChapterList = Results<ChapterResponse>;
+
+pub type MangaReadMarkers = Vec<Uuid>;
+pub type MangaReadMarkerResponse = Result<ApiData<MangaReadMarkers>>;
