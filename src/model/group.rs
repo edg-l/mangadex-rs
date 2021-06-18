@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 
-use super::{account::User, ApiData, ApiObject, Results};
+use super::{user::User, ApiData, ApiObject, Results};
 use crate::Result;
 
 #[derive(Debug, Deserialize, Clone)]

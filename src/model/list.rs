@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::Result;
 
-use super::{account::User, ApiData, ApiObject, Results};
+use super::{user::User, ApiData, ApiObject, Results};
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy)]
 #[serde(rename_all = "camelCase")]

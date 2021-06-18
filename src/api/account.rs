@@ -1,6 +1,6 @@
 //! Account management
 
-use crate::model::account::*;
+use crate::model::user::*;
 use crate::model::NoData;
 
 use crate::Result;
