@@ -136,10 +136,11 @@ pub enum LanguageCode {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, Hash, PartialEq, Eq)]
-#[serde(rename_all = "lowercase")]
 pub enum OrderType {
-    Asc,
-    Desc,
+    #[serde(rename = "asc")]
+    Ascending,
+    #[serde(rename = "desc")]
+    Descending,
 }
 
 pub type LocalizedString = std::collections::HashMap<LanguageCode, String>;

@@ -14,21 +14,24 @@ Api reference: https://api.mangadex.org/docs.html
 
 ## TODO
 
-- Auth ✅
-- Rate limits ❌
-- Manga ✅
-- Author ✅
-- Search ❌
-- Scanlationgroup ✅
-- Feed ✅
-- CustomList ❌
-- Captcha ❌
-- AtHome ✅
-- Legacy ✅
-- Infrastructure ✅
-- Account ✅
-- User ❌
-- Chapter ❌
+- [x] Manga
+- [x] Cover
+- [x] Author
+- [ ] Search
+- [x] Auth
+- [x] Scanlationgroup
+- [x] Feed
+- [ ] CustomList
+- [ ] Captcha
+- [x] AtHome
+- [x] Legacy
+- [x] Infrastructure
+- [x] Account
+- [ ] User
+- [ ] Chapter
+- [ ] Upload
+- [ ] Rate limits
+- [ ] Includes
 
 ## Tests
 
