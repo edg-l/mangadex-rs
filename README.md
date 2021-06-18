@@ -17,8 +17,6 @@ tracked in the repository to facilitate easier updates across versions.
 ## TODO
 
 - Missing endpoints
-  - Manga
-    - `GET manga/{id}/aggregate`
   - Upload
     - `POST /cover/{mangaId}`
 - Rate limiting

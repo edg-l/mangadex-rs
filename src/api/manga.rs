@@ -3,7 +3,7 @@ use derive_builder::Builder;
 use serde::Serialize;
 use uuid::Uuid;
 
-use crate::model::{manga::*, NoData};
+use crate::model::{manga::*, LanguageCode, NoData};
 use crate::{Client, Result};
 
 /// Manga list
@@ -99,6 +99,26 @@ impl_endpoint! {
     POST "/manga",
     #[body auth] CreateManga<'_>,
     #[flatten_result] MangaResponse
+}
+
+/// Get manga chapters & volumes
+///
+/// Call to `GET /manga/{id}/aggregate`
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct GetMangaAggregate<'a> {
+    /// Manga id
+    #[serde(skip)]
+    pub manga_id: &'a Uuid,
+
+    /// Translated language
+    pub translated_language: Option<LanguageCode>,
+}
+
+impl_endpoint! {
+    GET ("/manga/{:x}/aggregate", manga_id),
+    #[query] GetMangaAggregate<'_>,
+    #[flatten_result] MangaAggregateResponse
 }
 
 /// View manga

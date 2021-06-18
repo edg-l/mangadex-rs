@@ -176,11 +176,31 @@ pub enum MangaReadingStatus {
     Completed,
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct MangaReadingStatusBody {
     pub status: MangaReadingStatus,
 }
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct ChapterAggregate {
+    chapter: String,
+    count: i32,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct VolumeAggregate {
+    volume: String,
+    count: i32,
+    chapters: HashMap<String, ChapterAggregate>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct MangaAggregate {
+    volumes: HashMap<String, VolumeAggregate>,
+}
+
+pub type MangaAggregateResponse = Result<MangaAggregate>;
 
 pub type Tag = ApiObject<TagAttributes>;
 pub type TagResponse = Result<ApiData<Tag>>;
