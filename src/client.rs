@@ -52,20 +52,23 @@ impl Client {
             endpoint_url = endpoint_url.query_qs(query);
         }
 
-        let mut res = self.http.request(endpoint.method(), endpoint_url);
+        let mut req = self.http.request(endpoint.method(), endpoint_url);
         if let Some(body) = endpoint.body() {
-            res = res.json(body);
+            req = req.json(body);
+        }
+
+        if let Some(multipart) = endpoint.multipart() {
+            req = req.multipart(multipart);
         }
 
         if let Some(tokens) = self.get_tokens() {
-            res = res.bearer_auth(&tokens.session);
+            req = req.bearer_auth(&tokens.session);
         } else if endpoint.require_auth() {
             return Err(Errors::MissingTokens);
         }
 
+        let res = req.send().await?;
         let res = res
-            .send()
-            .await?
             .json::<<E::Response as FromResponse>::Response>()
             .await?;
 

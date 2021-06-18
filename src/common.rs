@@ -1,3 +1,4 @@
+use reqwest::multipart;
 use serde::{Deserialize, Deserializer, Serialize};
 use std::borrow::Cow;
 
@@ -51,6 +52,10 @@ pub(crate) trait Endpoint {
     }
 
     fn body(&self) -> Option<&Self::Body> {
+        None
+    }
+
+    fn multipart(&self) -> Option<multipart::Form> {
         None
     }
 }

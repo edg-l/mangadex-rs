@@ -16,9 +16,6 @@ tracked in the repository to facilitate easier updates across versions.
 
 ## TODO
 
-- Missing endpoints
-  - Upload
-    - `POST /cover/{mangaId}`
 - Rate limiting
 - Includes
 

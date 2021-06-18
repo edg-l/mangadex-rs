@@ -1,10 +1,17 @@
 //! Cover art
 
+use std::borrow::Cow;
+
 use derive_builder::Builder;
+use reqwest::multipart::Form;
+use reqwest::multipart::Part;
+use reqwest::Method;
 use serde::Serialize;
 use uuid::Uuid;
 
+use crate::common::Endpoint;
 use crate::schema::{cover::*, NoData};
+use crate::Client;
 use crate::Result;
 
 /// Cover art list
@@ -92,4 +99,43 @@ impl_endpoint! {
     DELETE ("/cover/{:x}", cover_id),
     #[no_data auth] DeleteCover<'_>,
     #[discard_result] Result<NoData>
+}
+
+/// Upload cover (requires authentication)
+///
+/// Call to `POST /cover/{manga_id}`
+pub struct UploadCover<'a> {
+    /// Manga id
+    pub manga_id: &'a Uuid,
+
+    /// Image bytes
+    pub image_bytes: Cow<'static, [u8]>,
+}
+
+impl Endpoint for UploadCover<'_> {
+    type Query = ();
+    type Body = ();
+    type Response = CoverResponse;
+
+    fn path(&self) -> Cow<str> {
+        Cow::Owned(format!("/cover/{:x}", self.manga_id))
+    }
+    fn method(&self) -> Method {
+        Method::POST
+    }
+
+    fn require_auth(&self) -> bool {
+        true
+    }
+
+    fn multipart(&self) -> Option<Form> {
+        let part = Part::bytes(self.image_bytes.clone());
+        Some(Form::new().part("file", part))
+    }
+}
+
+impl UploadCover<'_> {
+    pub async fn send(&self, client: &Client) -> CoverResponse {
+        client.send_request(self).await?
+    }
 }
