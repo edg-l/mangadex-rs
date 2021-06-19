@@ -12,7 +12,7 @@
 //!
 //! #[tokio::main]
 //! async fn main() {
-//!     let client = Client::default();
+//!     let mut client = Client::default();
 //!     client.login("username", "password").await.unwrap();
 //! }
 //! ```
