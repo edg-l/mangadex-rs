@@ -1,6 +1,6 @@
 [package]
 name = "mangadex"
-version = "0.1.1"
+version = "0.1.2"
 authors = [
     "Edgar <git@edgarluque.com>",
     "George Tsiamasiotis <git@gtsiam.anonaddy.com>",
