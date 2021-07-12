@@ -12,12 +12,13 @@ tags:
   - name: AtHome
   - name: Legacy
   - name: Infrastructure
+  - name: Upload
 info:
   title: MangaDex API
-  version: 5.1.4
+  version: 5.2.11
   contact:
     name: MangaDex staff team
-    email: mangadexstaff@gmail.com
+    email: support@mangadex.com
   description: |-
     MangaDex is an ad-free manga reader offering high-quality images!
 
@@ -42,8 +43,8 @@ info:
 
     | Endpoint                           | Requests per time period    | Time period in minutes |
     |------------------------------------|--------------------------   |------------------------|
-    | `POST   /account/create`           | 1                           | 60                     |
-    | `GET    /account/activate/{code}`  | 30                          | 60                     |
+    | `POST   /account/create`           | 5                           | 60                     |
+    | `POST   /account/activate/{code}`  | 30                          | 60                     |
     | `POST   /account/activate/resend`  | 5                           | 60                     |
     | `POST   /account/recover`          | 5                           | 60                     |
     | `POST   /account/recover/{code}`   | 5                           | 60                     |
@@ -66,6 +67,8 @@ info:
     | `PUT    /group/{id}`               | 10                          | 1                      |
     | `DELETE /group/{id}`               | 10                          | 10                     |
     | `GET    /at-home/server/{id}`      | 60                          | 1                      |
+    | `POST   /report`                   | 10                          | 1                      |
+    | `POST   /upload/begin`             | 30                          | 1                      |
 
     Calling these endpoints will further provide details via the following headers about your remaining quotas:
 
@@ -352,6 +355,167 @@ info:
     | mal   | myanimelist   | https://myanimelist.net/manga/{id}                                                            | Store as id                                                    |
     | raw   | N/A           | N/A                                                                                           | Stored as full URL, untranslated stuff URL (original language) |
     | engtl | N/A           | N/A                                                                                           | Stored as full URL, official english licenced URL              |
+
+    # Chapter Upload
+
+    ## In A Nutshell
+
+    To upload a chapter, you need to start an upload-session, upload files to this session and once done, commit the session with a ChapterDraft.
+    Uploaded Chapters will generally be put into a queue for staff approval and image processing before it is available to the public.
+
+    ## Limits
+
+    // @TODO
+
+    ## Example
+
+    You need to be logged in for any upload operation. Which Manga you're allowed to upload to and which contributing Scanlation Groups you're free to credit depend on your individual user state.
+
+    To start an upload session, we pick the manga-id we want to upload to and the group-ids we have to credit. We use the official test manga `f9c33607-9180-4ba6-b85c-e4b5faee7192` and the group "Unknown" with id `145f9110-0a6c-4b71-8737-6acb1a3c5da4`. If no group can be credited, we would not send any group-id at all, otherwise we can credit up to 5 groups.
+    Note that crediting all involved groups is mandatory, doing otherwise will lead to a rejection of your upload.
+
+    The first step is optional, but because only one upload session is allowed per user, we check if we have any open upload sessions by doing `GET /upload`. We expect a 404 response with error detail 'No upload session found'.
+
+    Next step is to begin our upload session. We send a `POST /upload/begin` with json data.
+
+    Request:
+    ```json
+    {
+      'manga' => 'f9c33607-9180-4ba6-b85c-e4b5faee7192',
+      'groups': [
+        '145f9110-0a6c-4b71-8737-6acb1a3c5da4'
+      ]
+    }
+    ```
+    Response:
+    ```json
+    {
+      'result': 'ok',
+      'data': {
+        'id': '113b7724-dcc2-4fbc-968f-9d775fcb1cd6',
+        'type': 'upload_session',
+        'attributes': {
+          'isCommitted': false,
+          'isProcessed': false,
+          'isDeleted': false
+        }
+      },
+      'relationships': [
+        {
+          'id': '41ce3e1a-8325-45b5-af8e-06aaf648a0df',
+          'type': 'user'
+        },
+        {
+          'id': 'f9c33607-9180-4ba6-b85c-e4b5faee7192',
+          'type': 'manga'
+        },
+        {
+          'id': '145f9110-0a6c-4b71-8737-6acb1a3c5da4',
+          'type': 'scanlation_group'
+        }
+      ]
+    }
+    ```
+
+    the `data.id` is what you want to store because you will need it for the following steps. We will refer to it as the `uploadSessionId` from here on out.
+
+    Remember the `GET /upload` request from the beginning? Try it again and you will see that it will return the same uploadSessionId. You can only have one upload session per user until you commit or abandon it, which makes it easy for you to continue uploading at a later time.
+
+    Now that we have a `uploadSessionId`, we can upload images. Any .jpg, .jpeg, .png or .gif files are fine, archives like .zip, .cbz or .rar are not. You will have to extract those archives beforehand if you want to make this work.
+
+    For each file, send a POST request like `POST /upload/{uploadSessionId}` with the image data. FormData seems to work best with `Content-Type: multipart/form-data; boundary=boundary`, mileage might vary depending on your programming language. Join our discord and ask for advice if in doubt.
+
+    You can upload a number of files in a single request (currently max. 10). The response body will be successful (response.result == 'ok') but might also contain errors if one or more files failed to validate. It's up to you to handle bad uploads and retry or reupload as you see fit. Successful uploads will be returned in the data array as type `upload_session_file`
+
+    A successful response could look like this:
+    ```json
+    {
+      'result': 'ok',
+      'errors': [],
+      'data': [
+        {
+          'id': '12cc211a-c3c3-4f64-8493-f26f9b98c6f6',
+          'type': 'upload_session_file',
+          'attributes': {
+            'originalFileName': 'testimage1.png',
+            'fileHash': 'bbf9b9548ee4605c388acb09e8ca83f625e5ff8e241f315eab5291ebd8049c6f',
+            'fileSize': 18920,
+            'mimeType': 'image/png',
+            'version': 1
+          }
+        }
+      ]
+    }
+    ```
+    Store the data[{index}].id attribute as the `uploadSessionFileId`, this will be the unique identifier for the file you just uploaded.
+
+    If you change your mind and want to remove a previously uploaded image, you can send a request like `DELETE /upload/{uploadSessionId}/{uploadSessionFileId}`, expecting a response like
+    ```json
+    {
+      'response': 'ok'
+    }
+    ```
+
+    Finally you can commit your upload session. We opened with a manga-id and group-ids but what we actually want is to upload a chapter. For that we have to build a payload consisting of two things: a chapterDraft and a pageOrder. The payload will look similar to the following:
+
+    ```json
+    {
+      'chapterDraft': {
+        'volume': '1',
+        'chapter': '2.5',
+        'title': 'Read Online',
+        'translatedLanguage': 'en'
+      },
+      'pageOrder': [
+          '12cc211a-c3c3-4f64-8493-f26f9b98c6f6'
+      ]
+    }
+    ```
+
+    the `chapterDraft` is the chapter data you would like to create, the pageOrder is an ordered list of uploadSessionFileIds you uploaded earlier.
+
+    Order didnt matter, now it does. Any files you uploaded but do not specify in this pageOrder array will be appended.
+
+    An example response is:
+    ```json
+    {
+      'result': 'ok',
+      'data': {
+        'id': '14d4639b-5a8f-4f42-a277-b222412930ca',
+        'type': 'chapter',
+        'attributes': {
+          'volume': '1',
+          'chapter': '2.5',
+          'title': 'Read Online',
+          'translatedLanguage': 'en',
+          'hash': '',
+          'data': [],
+          'dataSaver': [],
+          'publishAt': null,
+          'createdAt': '2021-06-16T00:40:22+00:00',
+          'updatedAt': '2021-06-16T00:40:22+00:00',
+          'version': 1
+        }
+      },
+      'relationships': [
+        {
+          'id': '145f9110-0a6c-4b71-8737-6acb1a3c5da4',
+          'type': 'scanlation_group'
+        },
+        {
+          'id': 'f9c33607-9180-4ba6-b85c-e4b5faee7192',
+          'type': 'manga'
+        },
+        {
+          'id': '41ce3e1a-8325-45b5-af8e-06aaf648a0df',
+          'type': 'user'
+        }
+      ]
+    }
+    ```
+
+    You just uploaded a chapter. Congratz!
+
 servers:
   - url: 'https://api.mangadex.org'
     description: MangaDex Api
@@ -414,14 +578,14 @@ paths:
               type: string
               format: uuid
           in: query
-          name: authors
+          name: authors[]
         - schema:
             type: array
             items:
               type: string
               format: uuid
           in: query
-          name: artists
+          name: artists[]
         - schema:
             type: integer
           in: query
@@ -433,7 +597,7 @@ paths:
               type: string
               format: uuid
           in: query
-          name: includedTags
+          name: includedTags[]
         - schema:
             type: string
             enum:
@@ -448,7 +612,7 @@ paths:
               type: string
               format: uuid
           in: query
-          name: excludedTags
+          name: excludedTags[]
         - schema:
             type: string
             enum:
@@ -467,14 +631,14 @@ paths:
                 - hiatus
                 - cancelled
           in: query
-          name: status
+          name: status[]
         - schema:
             type: array
             items:
               type: string
               pattern: ^[a-zA-Z\-]{2,5}$
           in: query
-          name: originalLanguage
+          name: originalLanguage[]
         - schema:
             type: array
             items:
@@ -486,14 +650,14 @@ paths:
                 - seinen
                 - none
           in: query
-          name: publicationDemographic
+          name: publicationDemographic[]
         - schema:
             type: array
             items:
               type: string
               format: uuid
           in: query
-          name: ids
+          name: ids[]
           description: Manga ids (limited to 100 per request)
         - schema:
             type: array
@@ -507,7 +671,7 @@ paths:
                 - erotica
                 - pornographic
           in: query
-          name: contentRating
+          name: contentRating[]
         - schema:
             type: string
             description: "DateTime string with following format: YYYY-MM-DDTHH:MM:SS"
@@ -535,12 +699,13 @@ paths:
                   - desc
           in: query
           name: order
+          style: deepObject
         - schema:
             type: array
             items:
               type: string
           in: query
-          name: includes
+          name: includes[]
       security: []
     post:
       summary: Create Manga
@@ -594,7 +759,7 @@ paths:
               type: string
               pattern: '^[a-zA-Z\-]{2,5}$'
           in: query
-          name: translatedLanguage
+          name: translatedLanguage[]
       responses:
         '200':
           description: OK
@@ -643,7 +808,7 @@ paths:
             items:
               type: string
           in: query
-          name: includes
+          name: includes[]
       responses:
         '200':
           description: OK
@@ -698,7 +863,24 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/MangaEdit'
+              allOf:
+                - $ref: '#/components/schemas/MangaEdit'
+                - type: object
+                  properties:
+                    artists:
+                      type: array
+                      items:
+                        type: string
+                        format: uuid
+                        minLength: 36
+                        maxLength: 36
+                    authors:
+                      type: array
+                      items:
+                        type: string
+                        format: uuid
+                        minLength: 36
+                        maxLength: 36
         description: The size of the body is limited to 16KB.
       tags:
         - Manga
@@ -858,7 +1040,7 @@ paths:
         name: code
         in: path
         required: true
-    get:
+    post:
       summary: Activate account
       tags:
         - Account
@@ -929,7 +1111,7 @@ paths:
               type: string
               format: uuid
           in: query
-          name: ids
+          name: ids[]
           description: ScanlationGroup ids (limited to 100 per request)
         - schema:
             type: string
@@ -940,7 +1122,7 @@ paths:
             items:
               type: string
           in: query
-          name: includes
+          name: includes[]
       security: []
     post:
       summary: Create Scanlation Group
@@ -991,7 +1173,7 @@ paths:
             items:
               type: string
           in: query
-          name: includes
+          name: includes[]
       responses:
         '200':
           description: OK
@@ -1396,7 +1578,7 @@ paths:
               type: string
               format: uuid
           in: query
-          name: ids
+          name: ids[]
           description: User ids (limited to 100 per request)
         - schema:
             type: string
@@ -1410,6 +1592,7 @@ paths:
                 enum: ['asc', 'desc']
           in: query
           name: order
+          style: deepObject
   '/user/{id}':
     parameters:
       - schema:
@@ -1431,6 +1614,40 @@ paths:
               schema:
                 $ref: '#/components/schemas/UserResponse'
       operationId: get-user-id
+      security: []
+    delete:
+      summary: Delete User
+      tags:
+        - User
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Response'
+      operationId: delete-user-id
+  /user/delete/{code}:
+    parameters:
+      - schema:
+          type: string
+          format: uuid
+        name: code
+        in: path
+        required: true
+        description: User delete code
+    post:
+      summary: Approve User deletion
+      tags:
+        - User
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Response'
+      operationId: post-user-delete-code
       security: []
   /user/password:
     post:
@@ -1532,7 +1749,7 @@ paths:
               type: string
               format: uuid
           in: query
-          name: ids
+          name: ids[]
           description: Chapter ids (limited to 100 per request)
         - schema:
             type: string
@@ -1544,7 +1761,7 @@ paths:
               type: string
               format: uuid
           in: query
-          name: groups
+          name: groups[]
         - schema:
             type: string
             format: uuid
@@ -1562,7 +1779,7 @@ paths:
                 items:
                   type: string
           in: query
-          name: volume
+          name: volume[]
         - schema:
             oneOf:
               - type: string
@@ -1577,7 +1794,7 @@ paths:
               type: string
               pattern: '^[a-zA-Z\-]{2,5}$'
           in: query
-          name: translatedLanguage
+          name: translatedLanguage[]
         - schema:
             type: string
             description: "DateTime string with following format: YYYY-MM-DDTHH:MM:SS"
@@ -1626,6 +1843,7 @@ paths:
                   - desc
           in: query
           name: order
+          style: deepObject
         - schema:
             type: array
             items:
@@ -1655,7 +1873,7 @@ paths:
             items:
               type: string
           in: query
-          name: includes
+          name: includes[]
       responses:
         '200':
           description: OK
@@ -1813,7 +2031,7 @@ paths:
               type: string
               pattern: '^[a-zA-Z\-]{2,5}$'
           in: query
-          name: translatedLanguage
+          name: translatedLanguage[]
         - schema:
             type: string
             description: "DateTime string with following format: YYYY-MM-DDTHH:MM:SS"
@@ -1862,6 +2080,7 @@ paths:
                   - desc
           in: query
           name: order
+          style: deepObject
   '/list/{id}/feed':
     parameters:
       - schema:
@@ -1926,7 +2145,7 @@ paths:
               type: string
               pattern: '^[a-zA-Z\-]{2,5}$'
           in: query
-          name: translatedLanguage
+          name: translatedLanguage[]
         - schema:
             type: string
             description: "DateTime string with following format: YYYY-MM-DDTHH:MM:SS"
@@ -1960,6 +2179,7 @@ paths:
                   - desc
           in: query
           name: order
+          style: deepObject
   '/manga/{id}/follow':
     parameters:
       - schema:
@@ -2049,7 +2269,7 @@ paths:
               type: string
               format: uuid
           in: query
-          name: manga
+          name: manga[]
           description: Manga ids (limited to 100 per request)
         - schema:
             type: array
@@ -2057,7 +2277,7 @@ paths:
               type: string
               format: uuid
           in: query
-          name: ids
+          name: ids[]
           description: Covers ids (limited to 100 per request)
         - schema:
             type: array
@@ -2065,7 +2285,7 @@ paths:
               type: string
               format: uuid
           in: query
-          name: uploaders
+          name: uploaders[]
           description: User ids (limited to 100 per request)
         - schema:
             type: object
@@ -2087,18 +2307,18 @@ paths:
                   - desc
           in: query
           name: order
+          style: deepObject
         - schema:
             type: array
             items:
               type: string
           in: query
-          name: includes
+          name: includes[]
       security: []
   /cover/{mangaId}:
     post:
       summary: Upload Cover
       tags:
-        - Cover
         - Upload
       operationId: upload-cover
       parameters:
@@ -2155,7 +2375,7 @@ paths:
             items:
               type: string
           in: query
-          name: includes
+          name: includes[]
       responses:
         '200':
           description: OK
@@ -2281,7 +2501,7 @@ paths:
               type: string
               format: uuid
           in: query
-          name: ids
+          name: ids[]
           description: Author ids (limited to 100 per request)
         - schema:
             type: string
@@ -2295,12 +2515,13 @@ paths:
                 enum: ['asc', 'desc']
           in: query
           name: order
+          style: deepObject
         - schema:
             type: array
             items:
               type: string
           in: query
-          name: includes
+          name: includes[]
       security: []
     post:
       summary: Create Author
@@ -2351,7 +2572,7 @@ paths:
             items:
               type: string
           in: query
-          name: includes
+          name: includes[]
       responses:
         '200':
           description: OK
@@ -2507,7 +2728,7 @@ paths:
               type: string
               pattern: '^[a-zA-Z\-]{2,5}$'
           in: query
-          name: translatedLanguage
+          name: translatedLanguage[]
         - schema:
             type: string
             description: "DateTime string with following format: YYYY-MM-DDTHH:MM:SS"
@@ -2541,12 +2762,13 @@ paths:
                   - desc
           in: query
           name: order
+          style: deepObject
         - schema:
             type: array
             items:
               type: string
           in: query
-          name: includes
+          name: includes[]
       security: []
   '/manga/{id}/read':
     parameters:
@@ -2597,7 +2819,7 @@ paths:
               type: string
               format: uuid
           in: query
-          name: ids
+          name: ids[]
           description: Manga ids
           required: true
         - name: grouped
@@ -2715,7 +2937,7 @@ paths:
             items:
               type: string
           in: query
-          name: includes
+          name: includes[]
       security: []
   '/at-home/server/{chapterId}':
     parameters:
@@ -3140,6 +3362,324 @@ paths:
         Authentication is optional. Captchas are tracked for both the client ip and for the user id, if you are logged in you want to send your session token but that is not required.
       security:
         - Bearer: []
+  /report/reasons/{category}:
+    parameters:
+      - schema:
+          type: string
+          enum:
+            - manga
+            - chapter
+            - scanlation_group
+            - user
+        name: category
+        in: path
+        required: true
+    get:
+      summary: Get a list of report reasons
+      operationId: get-report-reasons-by-category
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        type:
+                          type: string
+                          default: report_reason
+                        attributes:
+                          type: object
+                          properties:
+                            reason:
+                              $ref: '#/components/schemas/LocalizedString'
+                            detailsRequired:
+                              type: boolean
+                            category:
+                              type: string
+                              enum:
+                                - manga
+                                - chapter
+                                - scanlation_group
+                                - user
+                            version:
+                              type: integer
+                              minimum: 1
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+                  total:
+                    type: integer
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      tags:
+        - Report
+  /report:
+    post:
+      summary: Create a new Report
+      operationId: post-report
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Response'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                category:
+                  type: string
+                  enum:
+                    - manga
+                    - chapter
+                    - user
+                    - scanlation_group
+                reason:
+                  type: string
+                  format: uuid
+                  minLength: 36
+                  maxLength: 36
+                objectId:
+                  type: string
+                  format: uuid
+                  minLength: 36
+                  maxLength: 36
+                details:
+                  type: string
+        description: The size of the body is limited to 8KB.
+      tags:
+        - Report
+  /upload:
+    get:
+      summary: Get the current User upload session
+      operationId: get-upload-session
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadSession'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      tags:
+        - Upload
+  /upload/begin:
+    post:
+      summary: Start an upload session
+      operationId: begin-upload-session
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BeginUploadSession'
+        description: The size of the body is limited to 4KB.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadSession'
+      tags:
+        - Upload
+  /upload/{uploadSessionId}:
+    parameters:
+      - schema:
+          type: string
+          format: uuid
+        name: uploadSessionId
+        in: path
+        required: true
+    post:
+      summary: Upload images to the upload session
+      operationId: put-upload-session-file
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: string
+                    enum:
+                      - ok
+                      - error
+                  errors:
+                    type: array
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/UploadSessionFile'
+      tags:
+        - Upload
+    delete:
+      summary: Abandon upload session
+      operationId: abandon-upload-session
+      requestBody:
+        content: {}
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Response'
+      tags:
+        - Upload
+  /upload/{uploadSessionId}/commit:
+    parameters:
+      - schema:
+          type: string
+          format: uuid
+        name: uploadSessionId
+        in: path
+        required: true
+    post:
+      summary: Commit the upload session and specify chapter data
+      operationId: commit-upload-session
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CommitUploadSession'
+        description: The size of the body is limited to 4KB.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Chapter'
+      tags:
+        - Upload
+  /upload/{uploadSessionId}/{uploadSessionFileId}:
+    parameters:
+      - schema:
+          type: string
+          format: uuid
+        name: uploadSessionId
+        in: path
+        required: true
+      - schema:
+          type: string
+          format: uuid
+        name: uploadSessionFileId
+        in: path
+        required: true
+    delete:
+      summary: Delete an uploaded image from the Upload Session
+      operationId: delete-uploaded-session-file
+      requestBody:
+        content: {}
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Response'
+      tags:
+        - Upload
+  /upload/{uploadSessionId}/batch:
+    parameters:
+      - schema:
+          type: string
+          format: uuid
+        name: uploadSessionId
+        in: path
+        required: true
+    delete:
+      summary: Delete a set of uploaded images from the Upload Session
+      operationId: delete-uploaded-session-files
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: string
+                format: uuid
+                minItems: 1
+        description: The size of the body is limited to 20KB.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Response'
+      tags:
+        - Upload
+
 components:
   schemas:
     MangaRequest:
@@ -3208,6 +3748,11 @@ components:
             - suggestive
             - erotica
             - pornographic
+        tags:
+          type: array
+          items:
+            type: string
+            format: uuid
         modNotes:
           type: string
           nullable: true
@@ -3220,6 +3765,9 @@ components:
       additionalProperties:
         type: string
         pattern: "^[a-z]{2,8}$"
+      example:
+        en: This is a localized string
+        fr: C'est une chaine traduite
     MangaResponse:
       title: MangaResponse
       type: object
@@ -3631,6 +4179,26 @@ components:
           type: string
         leader:
           $ref: '#/components/schemas/User'
+        website:
+          type: string
+          nullable: true
+        ircServer:
+          type: string
+          nullable: true
+        ircChannel:
+          type: string
+          nullable: true
+        discord:
+          type: string
+          nullable: true
+        contactEmail:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        locked:
+          type: boolean
         version:
           type: integer
           minimum: 1
@@ -3693,6 +4261,26 @@ components:
           items:
             type: string
             format: uuid
+        website:
+          type: string
+          nullable: true
+        ircServer:
+          type: string
+          nullable: true
+        ircChannel:
+          type: string
+          nullable: true
+        discord:
+          type: string
+          nullable: true
+        contactEmail:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        locked:
+          type: boolean
         version:
           type: integer
           minimum: 1
@@ -4082,14 +4670,13 @@ components:
         translatedLanguage:
           type: string
           pattern: '^[a-zA-Z\-]{2,5}$'
-        data:
+        groups:
           type: array
           items:
             type: string
-        dataSaver:
-          type: array
-          items:
-            type: string
+            format: uuid
+            minLength: 36
+            maxLength: 36
         version:
           type: integer
           minimum: 1
@@ -4191,6 +4778,120 @@ components:
           type: integer
         total:
           type: integer
+    UploadSession:
+      title: UploadSession
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum:
+            - upload_session
+        attributes:
+          $ref: '#/components/schemas/UploadSessionAttributes'
+    UploadSessionAttributes:
+      title: UploadSessionAttributes
+      type: object
+      properties:
+        isCommitted:
+          type: boolean
+        isProcessed:
+          type: boolean
+        isDeleted:
+          type: boolean
+        version:
+          type: integer
+          minimum: 1
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+    UploadSessionFile:
+      title: UploadSessionFile
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum:
+            - upload_session_file
+        attributes:
+          $ref: '#/components/schemas/UploadSessionFileAttributes'
+    UploadSessionFileAttributes:
+      title: UploadSessionFileAttributes
+      type: object
+      properties:
+        originalFileName:
+          type: string
+        fileHash:
+          type: string
+        fileSize:
+          type: number
+        mimeType:
+          type: string
+        version:
+          type: integer
+          minimum: 1
+    BeginUploadSession:
+      title: BeginUploadSession
+      type: object
+      properties:
+        groups:
+          type: array
+          items:
+            type: string
+            format: uuid
+            minLength: 36
+            maxLength: 36
+        manga:
+          type: string
+          format: uuid
+          minLength: 36
+          maxLength: 36
+      additionalProperties: false
+      required: [manga, groups]
+    CommitUploadSession:
+      title: BeginUploadSession
+      type: object
+      properties:
+        chapterDraft:
+          $ref: '#/components/schemas/ChapterDraft'
+        pageOrder:
+          description: ordered list of Upload Session File ids
+          type: array
+          items:
+            type: string
+            format: uuid
+            minLength: 36
+            maxLength: 36
+          minItems: 1
+          maxItems: 500
+
+    ChapterDraft:
+      type: object
+      properties:
+        volume:
+          nullable: true
+          type: string
+          maxLength: 8
+        chapter:
+          nullable: true
+          type: string
+          maxLength: 8
+        title:
+          nullable: true
+          type: string
+          maxLength: 255
+        translatedLanguage:
+          type: string
+          pattern: '^[a-zA-Z\-]{2,5}$'
+      required: [volume, chapter, title, translatedLanguage]
+      additionalProperties: false
+
   securitySchemes:
     Bearer:
       type: http
