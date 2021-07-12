@@ -1,6 +1,8 @@
-//! [![Rust](https://github.com/edg-l/mangadex-rs/actions/workflows/rust.yml/badge.svg)](https://github.com/edg-l/mangadex-rs/actions/workflows/rust.yml)
-//! [![crates.io](http://meritbadge.herokuapp.com/mangadex)](https://crates.io/crates/mangadex)
-//! [![License](https://img.shields.io/github/license/edg-l/mangadex-rs)](https://github.com/edg-l/mangadex-rs/blob/master/LICENSE)
+//! [![Version](https://img.shields.io/crates/v/mangadex)](https://crates.io/crates/mangadex)
+//! [![Downloads](https://img.shields.io/crates/d/mangadex)](https://crates.io/crates/mangadex)
+//! [![License](https://img.shields.io/crates/l/mangadex)](https://crates.io/crates/mangadex)
+//! ![Rust](https://github.com/edg-l/mangadex-rs/workflows/Rust/badge.svg)
+//! [![Docs](https://docs.rs/mangadex/badge.svg)](https://docs.rs/mangadex)
 //!
 //! Unofficial asynchronous mangadex API wrapper for rust
 //!
@@ -52,6 +54,7 @@
 //! ```
 
 #![forbid(unsafe_code)]
+#![warn(missing_docs)]
 
 #[macro_use]
 mod client;
