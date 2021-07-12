@@ -51,6 +51,8 @@
 //! }
 //! ```
 
+#![forbid(unsafe_code)]
+
 #[macro_use]
 mod client;
 
