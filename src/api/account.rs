@@ -35,7 +35,7 @@ pub struct ActivateAccount<'a> {
 }
 
 impl_endpoint! {
-    GET ("/account/activate/{}", code),
+    POST ("/account/activate/{}", code),
     #[no_data] ActivateAccount<'_>,
     #[discard_result] Result<NoData>
 }

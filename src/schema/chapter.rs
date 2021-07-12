@@ -10,6 +10,7 @@ use crate::Result;
 pub struct ChapterAttributes {
     pub title: String,
     pub volume: Option<String>,
+    pub chapter: Option<String>,
     pub translated_language: String,
     pub hash: String,
     pub data: Vec<String>,

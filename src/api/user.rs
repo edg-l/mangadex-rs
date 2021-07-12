@@ -42,6 +42,7 @@ impl_endpoint! {
 /// Call to `GET /user/{user_id}`
 #[derive(Debug, Clone)]
 pub struct GetUser<'a> {
+    /// The user id.
     pub user_id: &'a Uuid,
 }
 
@@ -51,12 +52,44 @@ impl_endpoint! {
     #[flatten_result] UserResponse
 }
 
+/// Delete user
+///
+/// Call to `DELETE /user/{user_id}`
+#[derive(Debug, Clone)]
+pub struct DeleteUser<'a> {
+    /// The user id.
+    pub user_id: &'a Uuid,
+}
+
+impl_endpoint! {
+    DELETE ("/user/{:x}", user_id),
+    #[no_data auth] DeleteUser<'_>,
+    #[discard_result] Result<NoData>
+}
+
+/// Approve user deletion
+///
+/// Call to `POST /user/delete/{code}`
+#[derive(Debug, Clone)]
+pub struct ApproveUserDeletion<'a> {
+    /// The code.
+    pub code: &'a Uuid,
+}
+
+impl_endpoint! {
+    POST ("/user/delete/{:x}", code),
+    #[no_data auth] ApproveUserDeletion<'_>,
+    #[discard_result] Result<NoData>
+}
+
 /// Update user password
 ///
 /// Call to `POST /user/password`
 #[derive(Debug, Serialize, Clone)]
 pub struct UpdatePassword<'a> {
+    /// The old password.
     pub old_password: &'a str,
+    /// The new password.
     pub new_password: &'a str,
 }
 

@@ -11,6 +11,7 @@ pub mod group;
 pub mod legacy;
 pub mod list;
 pub mod manga;
+pub mod report;
 pub mod user;
 
 mod common;

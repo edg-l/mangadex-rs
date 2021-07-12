@@ -182,8 +182,10 @@ macro_rules! impl_endpoint {
     } => {
 
         impl $crate::common::Endpoint for $typ {
+            /// The response type.
             type Response = $out;
 
+            /// Get the method of the request.
             fn method(&self) -> reqwest::Method {
                 reqwest::Method::$method
             }
@@ -196,11 +198,13 @@ macro_rules! impl_endpoint {
         impl_endpoint! { @send $(:$out_res)?, $typ, $out }
     };
     { @path ($path:expr, $($arg:ident),+) } => {
+        /// Get the path of the request.
         fn path(&self) -> std::borrow::Cow<str> {
             std::borrow::Cow::Owned(format!($path, $(self.$arg),+))
         }
     };
     { @path $path:expr } => {
+        /// Get the path of the request.
         fn path(&self) -> std::borrow::Cow<str> {
             std::borrow::Cow::Borrowed($path)
         }
@@ -208,6 +212,7 @@ macro_rules! impl_endpoint {
     { @payload query } => {
         type Query = Self;
         type Body = ();
+        /// Get the query of the request.
         fn query(&self) -> Option<&Self::Query> {
             Some(&self)
         }
@@ -215,6 +220,7 @@ macro_rules! impl_endpoint {
     { @payload body } => {
         type Query = ();
         type Body = Self;
+        /// Get the body of the request.
         fn body(&self) -> Option<&Self::Body> {
             Some(&self)
         }
@@ -224,12 +230,14 @@ macro_rules! impl_endpoint {
         type Body = ();
     };
     { @auth } => {
+        /// Get whether auth is required for this request.
         fn require_auth(&self) -> bool {
             true
         }
     };
     { @send, $typ:ty, $out:ty } => {
         impl $typ {
+            /// Send the request
             pub async fn send(&self, client: &$crate::Client) -> $crate::Result<$out> {
                 client.send_request(self).await
             }
@@ -237,6 +245,7 @@ macro_rules! impl_endpoint {
     };
     { @send:flatten_result, $typ:ty, $out:ty } => {
         impl $typ {
+            /// Send the request
             pub async fn send(&self, client: &$crate::Client) -> $out {
                 client.send_request(self).await?
             }
@@ -244,6 +253,7 @@ macro_rules! impl_endpoint {
     };
     { @send:discard_result, $typ:ty, $out:ty } => {
         impl $typ {
+            /// Send the request
             pub async fn send(&self, client: &$crate::Client) -> $crate::Result<()> {
                 client.send_request(self).await??;
                 Ok(())

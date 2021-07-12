@@ -16,6 +16,7 @@ tracked in the repository to facilitate easier updates across versions.
 
 ## TODO
 
+- Upload
 - Rate limiting
 - Includes
 

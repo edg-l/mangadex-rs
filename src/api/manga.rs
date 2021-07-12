@@ -78,6 +78,9 @@ pub struct ListManga<'a> {
 
     /// Sorting order
     pub order: Option<MangaOrder>,
+
+    /// Includes.
+    pub includes: Option<Vec<String>>,
 }
 
 impl_endpoint! {
@@ -93,6 +96,7 @@ impl_endpoint! {
 /// Call to `POST /manga`
 #[derive(Debug, Serialize, Clone)]
 pub struct CreateManga<'a> {
+    /// The request.
     #[serde(flatten)]
     pub request: &'a MangaRequest,
 }
@@ -128,6 +132,7 @@ impl_endpoint! {
 /// Call to `GET /manga/{id}`
 #[derive(Debug, Clone)]
 pub struct GetManga<'a> {
+    /// The manga id.
     pub id: &'a Uuid,
 }
 
@@ -144,8 +149,10 @@ impl_endpoint! {
 /// Call to `PUT /manga/{id}`
 #[derive(Debug, Serialize, Clone)]
 pub struct UpdateManga<'a> {
+    /// The manga id.
     #[serde(skip)]
     pub id: &'a Uuid,
+    /// The request.
     #[serde(flatten)]
     pub request: &'a MangaRequest,
 }

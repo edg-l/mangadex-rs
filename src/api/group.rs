@@ -26,6 +26,9 @@ pub struct ListGroups<'a> {
 
     /// Author name
     pub name: Option<&'a str>,
+
+    /// Includes
+    pub includes: Option<&'a str>,
 }
 
 impl_endpoint! {

@@ -9,6 +9,13 @@ use crate::Result;
 pub struct ScanlationGroupAttributes {
     pub name: String,
     pub leader: User,
+    pub website: Option<String>,
+    pub irc_server: Option<String>,
+    pub irc_channel: Option<String>,
+    pub discord: Option<String>,
+    pub contact_email: Option<String>,
+    pub description: Option<String>,
+    pub locked: bool,
     pub version: i32,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
