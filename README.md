@@ -1,12 +1,12 @@
 # mangadex-rs
 
-[![Rust](https://github.com/edg-l/mangadex-rs/actions/workflows/rust.yml/badge.svg)](https://github.com/edg-l/mangadex-rs/actions/workflows/rust.yml)
-[![crates.io](http://meritbadge.herokuapp.com/mangadex)](https://crates.io/crates/mangadex)
-[![License](https://img.shields.io/github/license/edg-l/mangadex-rs)](https://github.com/edg-l/mangadex-rs/blob/master/LICENSE)
+[![Version](https://img.shields.io/crates/v/mangadex)](https://crates.io/crates/mangadex)
+[![Downloads](https://img.shields.io/crates/d/mangadex)](https://crates.io/crates/mangadex)
+[![License](https://img.shields.io/crates/l/mangadex)](https://crates.io/crates/mangadex)
+![Rust](https://github.com/edg-l/mangadex-rs/workflows/Rust/badge.svg)
+[![Docs](https://docs.rs/mangadex/badge.svg)](https://docs.rs/mangadex)
 
-> Early work in progress.
-
-Unofficial asynchronous mangadex API wrapper for rust
+Unofficial asynchronous mangadex API wrapper for rust.
 
 https://rust-lang.github.io/api-guidelines/checklist.html
 
